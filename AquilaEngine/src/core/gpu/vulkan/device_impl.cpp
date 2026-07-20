@@ -1,0 +1,474 @@
+#define NOMINMAX
+
+#include "device_impl.h"
+
+#include <core/window.h>
+#include <core/gpu/utils/converters.h>
+
+#include <GLFW/glfw3.h>
+
+#include <ranges>
+#include <iostream>
+
+using namespace core::gpu;
+
+
+
+/// === These are util functions
+
+
+
+const std::vector<char const*> validationLayers = {
+	"VK_LAYER_KHRONOS_validation"
+};
+
+std::vector<const char*> GetRequiredExtensions()
+{
+	uint32_t glfwExtensionCount = 0;
+	auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	std::vector extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+	if (enableValidationLayers)
+	{
+		extensions.push_back(vk::EXTDebugUtilsExtensionName);
+	}
+
+	return extensions;
+}
+
+static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
+	vk::DebugUtilsMessageTypeFlagsEXT type,
+	const vk::DebugUtilsMessengerCallbackDataEXT*
+	pCallbackData, void*)
+{
+	std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
+	return vk::False;
+}
+
+vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats, utils::TextureFormat preferredFormat)
+{
+	vk::Format vkPreferredFormat = utils::ToVulkan(preferredFormat);
+
+	for (const auto& format : availableFormats)
+	{
+		if (format.format == vkPreferredFormat &&
+			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+		{
+			return format;
+		}
+	}
+
+	for (const auto& format : availableFormats)
+	{
+		if (format.format == vk::Format::eB8G8R8A8Srgb &&
+			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
+		{
+			return format;
+		}
+	}
+
+	return availableFormats[0];
+}
+
+vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes, utils::PresentMode preferredMode)
+{
+	vk::PresentModeKHR vkPreferredMode = utils::ToVulkan(preferredMode);
+
+	for (const auto& mode : availableModes)
+	{
+		if (mode == vkPreferredMode)
+		{
+			return mode;
+		}
+	}
+
+	return vk::PresentModeKHR::eFifo;
+}
+
+vk::Extent2D Device::Impl::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height)
+{
+	if (capabilities.currentExtent.width != 0xFFFFFFFF)
+	{
+		return capabilities.currentExtent;
+	}
+
+	vk::Extent2D actualExtent = { width, height };
+
+	actualExtent.width = std::clamp(actualExtent.width,
+		capabilities.minImageExtent.width,
+		capabilities.maxImageExtent.width);
+	actualExtent.height = std::clamp(actualExtent.height,
+		capabilities.minImageExtent.height,
+		capabilities.maxImageExtent.height);
+
+	return actualExtent;
+}
+
+
+/// == These functions are the actual Vulkan Impl
+
+
+Device::Device(const Window& _wnd)
+{
+	m_impl = std::make_unique<Impl>(_wnd);
+
+	m_impl->CreateInstance();
+	m_impl->SetupDebugMessenger();
+	m_impl->CreateSurface();
+	m_impl->PickPhysicalDevice();
+	m_impl->CreateLogicalDevice();
+}
+
+Device::~Device() {}
+
+void Device::Impl::CreateInstance()
+{
+	vk::ApplicationInfo appInfo
+	{
+		.pApplicationName = window.GetAppName().c_str(),
+		.applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+		.pEngineName = "No Engine",
+		.engineVersion = VK_MAKE_VERSION(1, 0, 0),
+		.apiVersion = vk::ApiVersion14
+	};
+
+	std::vector<char const*> requiredLayers;
+	if (enableValidationLayers)
+	{
+		requiredLayers.assign(validationLayers.begin(), validationLayers.end());
+	}
+
+	auto layerProperties = context.enumerateInstanceLayerProperties();
+	if (std::ranges::any_of(requiredLayers, [&layerProperties](auto const& requiredLayer) {
+		return std::ranges::none_of(layerProperties,
+			[requiredLayer](auto const& layerProperty)
+			{ return strcmp(layerProperty.layerName, requiredLayer) == 0; });
+		}))
+	{
+		throw std::runtime_error("One or more required layers are not supported!");
+	}
+
+	auto requiredExtensions = GetRequiredExtensions();
+
+	auto extensionProperties = context.enumerateInstanceExtensionProperties();
+	for (auto const& requiredExtension : requiredExtensions)
+	{
+		if (std::ranges::none_of(extensionProperties,
+			[requiredExtension](auto const& extensionProperty)
+			{ return strcmp(extensionProperty.extensionName, requiredExtension) == 0; }))
+		{
+			throw std::runtime_error("Required extension not supported: " + std::string(requiredExtension));
+		}
+	}
+
+	vk::InstanceCreateInfo createInfo
+	{
+		.pApplicationInfo = &appInfo,
+		.enabledLayerCount = static_cast<uint32_t>(requiredLayers.size()),
+		.ppEnabledLayerNames = requiredLayers.data(),
+		.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
+		.ppEnabledExtensionNames = requiredExtensions.data()
+	};
+
+	instance = vk::raii::Instance(context, createInfo);
+}
+
+void Device::Impl::SetupDebugMessenger()
+{
+	if (!enableValidationLayers) return;
+
+	vk::DebugUtilsMessageSeverityFlagsEXT severityFlags(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eError);
+
+	vk::DebugUtilsMessageTypeFlagsEXT    messageTypeFlags(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation);
+
+	vk::DebugUtilsMessengerCreateInfoEXT debugUtilsMessengerCreateInfoEXT
+	{
+		.messageSeverity = severityFlags,
+		.messageType = messageTypeFlags,
+		.pfnUserCallback = &DebugCallback
+	};
+
+	debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
+}
+
+void ::Device::Impl::CreateSurface()
+{
+	GLFWwindow* glfwWindow = window.GetHandle();
+	if (!glfwWindow) 
+	{
+		throw std::runtime_error("Invalid GLFW window handle!");
+	}
+
+	VkSurfaceKHR _surface;
+
+	VkResult result = glfwCreateWindowSurface(*instance, glfwWindow, nullptr, &_surface);
+	if (result != VK_SUCCESS)
+	{
+		throw std::runtime_error("Failed to create window surface. Error code: " + std::to_string(result));
+	}
+	
+	surface = vk::raii::SurfaceKHR(instance, _surface);
+}
+
+void Device::Impl::PickPhysicalDevice()
+{
+	std::vector<vk::raii::PhysicalDevice> devices = instance.enumeratePhysicalDevices();
+
+	vk::raii::PhysicalDevice* bestDevice = nullptr;
+	int bestScore = -1;
+
+	for (auto& device : devices)
+	{
+		auto props = device.getProperties();
+		int score = 0;
+
+		auto queueFamilies = device.getQueueFamilyProperties();
+		bool supportsGraphics = std::ranges::any_of(queueFamilies,
+			[](auto const& qfp) { return !!(qfp.queueFlags & vk::QueueFlagBits::eGraphics); });
+
+		auto availableDeviceExtensions = device.enumerateDeviceExtensionProperties();
+		bool supportsAllRequiredExtensions = true;
+
+		std::vector<const char*> requiredExtensions = {
+			vk::KHRSwapchainExtensionName,
+			vk::KHRSpirv14ExtensionName,
+			vk::KHRSynchronization2ExtensionName,
+			vk::KHRCreateRenderpass2ExtensionName
+		};
+
+		for (const auto& requiredExt : requiredExtensions)
+		{
+			bool found = std::ranges::any_of(availableDeviceExtensions,
+				[requiredExt](auto const& availableExt)
+				{ return strcmp(availableExt.extensionName, requiredExt) == 0; });
+
+			if (!found)
+			{
+				supportsAllRequiredExtensions = false;
+				break;
+			}
+		}
+
+		if (!supportsAllRequiredExtensions) continue;
+
+		auto basicFeatures = device.template getFeatures2
+			<vk::PhysicalDeviceFeatures2,
+			vk::PhysicalDeviceVulkan13Features,
+			vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
+
+		bool samplerAniso = basicFeatures.template get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
+		bool dynRender = basicFeatures.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering;
+		bool extDynState = basicFeatures.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+
+		std::vector<const char*> rtExtensions = {
+			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+			VK_KHR_RAY_QUERY_EXTENSION_NAME,
+			VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+			VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
+		};
+
+		bool supportsAllRTExtensions = true;
+		for (const auto& rtExt : rtExtensions)
+		{
+			bool found = std::ranges::any_of(availableDeviceExtensions,
+				[rtExt](auto const& availableExt)
+				{ return strcmp(availableExt.extensionName, rtExt) == 0; });
+
+			if (!found)
+			{
+				supportsAllRTExtensions = false;
+				break;
+			}
+		}
+
+		if (!supportsAllRTExtensions) continue;
+
+		auto rtFeatures = device.template getFeatures2
+			<vk::PhysicalDeviceFeatures2,
+			vk::PhysicalDeviceBufferDeviceAddressFeatures,
+			vk::PhysicalDeviceAccelerationStructureFeaturesKHR,
+			vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
+			vk::PhysicalDeviceRayQueryFeaturesKHR>();
+
+		bool bufferAddr = rtFeatures.template get<vk::PhysicalDeviceBufferDeviceAddressFeatures>().bufferDeviceAddress;
+		bool accelStruct = rtFeatures.template get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>().accelerationStructure;
+		bool rtPipeline = rtFeatures.template get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>().rayTracingPipeline;
+		bool rayQuery = rtFeatures.template get<vk::PhysicalDeviceRayQueryFeaturesKHR>().rayQuery;
+
+		if (props.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
+			score += 1000;
+		else if (props.deviceType == vk::PhysicalDeviceType::eIntegratedGpu)
+			score += 100;
+
+		score += props.limits.maxImageDimension2D / 1000;
+
+		if (score > bestScore)
+		{
+			bestScore = score;
+			bestDevice = &device;
+		}
+	}
+
+	if (bestDevice)
+	{
+		auto props = bestDevice->getProperties();
+		physicalDevice = *bestDevice;
+	}
+	else
+	{
+		throw std::runtime_error("Failed to find a suitable GPU with raytracing support!");
+	}
+}
+
+void Device::Impl::CreateLogicalDevice()
+{
+	std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+
+	for (uint32_t qfpIndex = 0; qfpIndex < queueFamilyProperties.size(); ++qfpIndex)
+	{
+		if ((queueFamilyProperties[qfpIndex].queueFlags & vk::QueueFlagBits::eGraphics) &&
+			physicalDevice.getSurfaceSupportKHR(qfpIndex, *surface))
+		{
+			queueIndex = qfpIndex;
+			break;
+		}
+	}
+
+	if (queueIndex == ~0)
+	{
+		throw std::runtime_error("Could not find a queue for graphics and present");
+	}
+
+	vk::PhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures{};
+	rayQueryFeatures.rayQuery = VK_TRUE;
+
+	vk::PhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures{};
+	rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+	rtPipelineFeatures.pNext = &rayQueryFeatures;
+
+	vk::PhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures{};
+	accelFeatures.accelerationStructure = VK_TRUE;
+	accelFeatures.pNext = &rtPipelineFeatures;
+
+	vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
+	bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
+	bufferDeviceAddressFeatures.pNext = &accelFeatures;
+
+	vk::StructureChain featureChain = {
+		vk::PhysicalDeviceFeatures2 {.features = {.samplerAnisotropy = true} },
+		vk::PhysicalDeviceVulkan11Features {.shaderDrawParameters = true},
+		vk::PhysicalDeviceVulkan13Features {.synchronization2 = true, .dynamicRendering = true},
+		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT {.extendedDynamicState = true},
+		vk::PhysicalDeviceComputeShaderDerivativesFeaturesKHR {.computeDerivativeGroupQuads = true }
+	};
+
+	featureChain.get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().pNext = &bufferDeviceAddressFeatures;
+
+	float queuePriority = 1.0f;
+	vk::DeviceQueueCreateInfo deviceQueueCreateInfo{
+		.queueFamilyIndex = queueIndex,
+		.queueCount = 1,
+		.pQueuePriorities = &queuePriority
+	};
+
+	vk::DeviceCreateInfo deviceCreateInfo{
+		.pNext = &featureChain.get<vk::PhysicalDeviceFeatures2>(),
+		.queueCreateInfoCount = 1,
+		.pQueueCreateInfos = &deviceQueueCreateInfo,
+		.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtension.size()),
+		.ppEnabledExtensionNames = requiredDeviceExtension.data()
+	};
+
+	device = vk::raii::Device(physicalDevice, deviceCreateInfo);
+	graphicsQueue = vk::raii::Queue(device, queueIndex, 0);
+
+	auto rtProps = physicalDevice.getProperties2
+		<vk::PhysicalDeviceProperties2,
+		vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+
+	const auto& rtPipelineProps = rtProps.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+}
+
+void Device::Impl::CreateSwapchain()
+{
+	vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
+	auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(surface);
+	auto presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
+
+	vk::SurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(surfaceFormats, utils::TextureFormat::RGBA8_SRGB);
+	vk::PresentModeKHR presentMode = ChoosePresentMode(presentModes, utils::PresentMode::Fifo);
+	vk::Extent2D extent = ChooseExtent(capabilities, 0, 0);
+
+	uint32_t imageCount = std::max(2u, capabilities.minImageCount);
+	if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
+	{
+		imageCount = capabilities.maxImageCount;
+	}
+
+	vk::SwapchainCreateInfoKHR createInfo{
+		.surface = surface,
+		.minImageCount = imageCount,
+		.imageFormat = surfaceFormat.format,
+		.imageColorSpace = surfaceFormat.colorSpace,
+		.imageExtent = extent,
+		.imageArrayLayers = 1,
+		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst,
+		.imageSharingMode = vk::SharingMode::eExclusive,
+		.preTransform = capabilities.currentTransform,
+		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+		.presentMode = presentMode,
+		.clipped = vk::True,
+		.oldSwapchain = nullptr
+	};
+
+	swapchain = vk::raii::SwapchainKHR(device, createInfo);
+	swapchainExtent = extent;
+
+	std::vector<vk::Image> vkImages = swapchain.getImages();
+	swapchainImageViews.clear();
+	swapchainImageViews.reserve(vkImages.size());
+
+	for (vk::Image image : vkImages)
+	{
+		vk::ImageViewCreateInfo viewInfo{
+			.image = image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = surfaceFormat.format,
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		};
+		swapchainImageViews.emplace_back(device, viewInfo);
+
+		/*gpu::SPredefinedImageCreateInfo imageInfo{};
+		imageInfo.image = image;
+		imageInfo.extent = extent;
+		imageInfo.aspectFlags = vk::ImageAspectFlagBits::eColor;
+		imageInfo.format = surfaceFormat.format;
+
+		swapchainImages.emplace_back(std::make_unique<Image>(parent, imageInfo));*/
+	}
+
+	swapchainImageFormat = surfaceFormat.format;
+}
+
+/// === These functions are public side impl
+
+
+
+Device::Impl::Impl(const Window& _wnd) 
+	: window(_wnd)
+{}
+
+Device::Impl::~Impl() {}
