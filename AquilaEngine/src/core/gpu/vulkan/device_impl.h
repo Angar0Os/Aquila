@@ -19,9 +19,11 @@ namespace core { class Window; }
 
 namespace core::gpu
 {
+	class Image;
+
 	struct Device::Impl
 	{
-		explicit Impl(const Window& _wnd);
+		explicit Impl(const Window& _wnd, const Device* _device);
 		~Impl() noexcept;
 
 		void CreateInstance();
@@ -35,6 +37,8 @@ namespace core::gpu
 		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
 		vk::Extent2D			ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capabilities, uint32_t _width, uint32_t _height);
 
+		const Device*						parent			= nullptr;
+
 		vk::raii::Context					context;
 		vk::raii::Instance					instance		= nullptr;
 		vk::raii::DebugUtilsMessengerEXT	debugMessenger	= nullptr;
@@ -47,7 +51,7 @@ namespace core::gpu
 		vk::raii::SwapchainKHR				swapchain = nullptr;
 		std::vector<vk::raii::ImageView>    swapchainImageViews;
 		vk::Extent2D						swapchainExtent;
-		//std::vector<std::unique_ptr<Image>>	swapchainImages; // TODO : Ajouter la RHI image.
+		std::vector<std::unique_ptr<Image>>	swapchainImages; 
 		vk::Format							swapchainImageFormat;
 
 		const core::Window& window;

@@ -8,10 +8,6 @@
 
 using namespace core::gpu;
 
-
-/// == These functions are the actual Vulkan Impl
-
-
 Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
 	: buffer(nullptr), device(_device), memory(nullptr), bufferSize(_info.size), mappedData(nullptr)
 {
@@ -72,10 +68,6 @@ uint32_t Buffer::Impl::FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFl
 
 	throw std::runtime_error("Failed to find suitable memory type");
 }
-
-
-/// === These functions are public side impl
-
 
 Buffer::Buffer(const core::gpu::Device* _device, const BufferCreateInfo& _info)
 {

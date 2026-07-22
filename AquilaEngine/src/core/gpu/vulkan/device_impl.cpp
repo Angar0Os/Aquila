@@ -1,6 +1,7 @@
 #define NOMINMAX
 
 #include "device_impl.h"
+#include "image_impl.h"
 
 #include <core/window.h>
 #include <core/gpu/utils/converters.h>
@@ -11,12 +12,6 @@
 #include <iostream>
 
 using namespace core::gpu;
-
-
-
-/// === These are util functions
-
-
 
 const std::vector<char const*> validationLayers = {
 	"VK_LAYER_KHRONOS_validation"
@@ -104,19 +99,17 @@ vk::Extent2D Device::Impl::ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capab
 	return actualExtent;
 }
 
-
-/// == These functions are the actual Vulkan Impl
-
-
 Device::Device(const Window& _wnd)
 {
-	m_impl = std::make_unique<Impl>(_wnd);
+	m_impl = std::make_unique<Impl>(_wnd, this);
 
 	m_impl->CreateInstance();
 	m_impl->SetupDebugMessenger();
 	m_impl->CreateSurface();
 	m_impl->PickPhysicalDevice();
 	m_impl->CreateLogicalDevice();
+
+	m_impl->CreateSwapchain();
 }
 
 Device::~Device() {}
@@ -451,27 +444,28 @@ void Device::Impl::CreateSwapchain()
 		};
 		swapchainImageViews.emplace_back(device, viewInfo);
 
-		/*gpu::SPredefinedImageCreateInfo imageInfo{};
+		PredefinedImageCreateInfo imageInfo{};
 		imageInfo.image = image;
 		imageInfo.extent = extent;
 		imageInfo.aspectFlags = vk::ImageAspectFlagBits::eColor;
 		imageInfo.format = surfaceFormat.format;
 
-		swapchainImages.emplace_back(std::make_unique<Image>(parent, imageInfo));*/
+		swapchainImages.emplace_back(std::make_unique<Image>(parent, imageInfo));
 	}
 
 	swapchainImageFormat = surfaceFormat.format;
 }
 
-/// === These functions are public side impl
-
-
-
-Device::Impl::Impl(const Window& _wnd) 
-	: window(_wnd)
+Device::Impl::Impl(const Window& _wnd, const Device* _device) 
+	: window(_wnd), parent(_device)
 {}
 
 Device::Impl::~Impl() {}
+
+Device::Impl& ::Device::GetImpl() const
+{
+	return *m_impl;
+}
 
 /* 
 TODO : Just to remember
