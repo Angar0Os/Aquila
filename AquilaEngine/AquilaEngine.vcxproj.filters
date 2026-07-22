@@ -45,6 +45,9 @@
     <ClCompile Include="src\core\gpu\utils\converters.cpp">
       <Filter>Source Files\core\gpu\utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\gpu\vulkan\buffer_impl.cpp">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\core\window.h">
@@ -61,6 +64,12 @@
     </ClInclude>
     <ClInclude Include="include\core\gpu\utils\converters.h">
       <Filter>Header Files\core\gpu\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\gpu\buffer.h">
+      <Filter>Header Files\core\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

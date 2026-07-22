@@ -45,7 +45,7 @@ static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSever
 	return vk::False;
 }
 
-vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats, utils::TextureFormat preferredFormat)
+vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats, utils::ETextureFormat preferredFormat)
 {
 	vk::Format vkPreferredFormat = utils::ToVulkan(preferredFormat);
 
@@ -70,7 +70,7 @@ vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::Sur
 	return availableFormats[0];
 }
 
-vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes, utils::PresentMode preferredMode)
+vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes, utils::EPresentMode preferredMode)
 {
 	vk::PresentModeKHR vkPreferredMode = utils::ToVulkan(preferredMode);
 
@@ -402,8 +402,8 @@ void Device::Impl::CreateSwapchain()
 	auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(surface);
 	auto presentModes = physicalDevice.getSurfacePresentModesKHR(surface);
 
-	vk::SurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(surfaceFormats, utils::TextureFormat::RGBA8_SRGB);
-	vk::PresentModeKHR presentMode = ChoosePresentMode(presentModes, utils::PresentMode::Fifo);
+	vk::SurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(surfaceFormats, utils::ETextureFormat::RGBA8_SRGB);
+	vk::PresentModeKHR presentMode = ChoosePresentMode(presentModes, utils::EPresentMode::Fifo);
 	vk::Extent2D extent = ChooseExtent(capabilities, 0, 0);
 
 	uint32_t imageCount = std::max(2u, capabilities.minImageCount);
@@ -472,3 +472,14 @@ Device::Impl::Impl(const Window& _wnd)
 {}
 
 Device::Impl::~Impl() {}
+
+/* 
+TODO : Just to remember
+
+I need to create image impl. To do this i need to implement the following : 
+ - Buffer
+ - CommandBuffer
+ - Acceleration Structure (MaybeNot ?)
+ - Pipeline 
+ - DescriptorSet
+*/
