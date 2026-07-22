@@ -115,6 +115,8 @@ Device::Device(const Window& _wnd)
 
 	m_impl->CreateDescriptorPool();
 	m_impl->CreateCommandPool();
+
+	m_impl->CreateSyncObjects();
 }
 
 Device::~Device() {}
@@ -474,6 +476,111 @@ void Device::Impl::CreateCommandPool()
 	};
 
 	commandPool = std::make_unique<CommandPool>(parent, poolInfo);
+}
+
+void Device::Impl::CreateSyncObjects()
+{
+	frameSyncObjects.clear();
+	tempCmdBufs.clear();
+
+	vk::SemaphoreCreateInfo semInfo{};
+	vk::FenceCreateInfo fenceInfo{ .flags = vk::FenceCreateFlagBits::eSignaled };
+
+	frameSyncObjects.reserve(Device::FRAMES_IN_FLIGHT);
+	for (size_t i = 0; i < Device::FRAMES_IN_FLIGHT; ++i)
+	{
+		FrameSync frameSync{
+			.inFlightFence = vk::raii::Fence(device, fenceInfo),
+			.imageAvailable = vk::raii::Semaphore(device, semInfo),
+			.renderFinished = vk::raii::Semaphore(device, semInfo)
+		};
+
+		frameSyncObjects.push_back(std::move(frameSync));
+	}
+
+	uint32_t swapchainImageCount = swapchain.getImages().size();
+	tempCmdBufs.resize(::Device::FRAMES_IN_FLIGHT);
+}
+
+void Device::Impl::RecreateSwapchain()
+{
+	needsResize = false;
+	int width = 0, height = 0;
+	glfwGetFramebufferSize(window.GetHandle(), &width, &height);
+	while (width == 0 || height == 0)
+	{
+		glfwGetFramebufferSize(window.GetHandle(), &width, &height);
+		glfwWaitEvents();
+	}
+
+	device.waitIdle();
+
+	swapchainImageViews.clear();
+	swapchainImages.clear();
+
+	vk::SwapchainKHR oldSwapchain = *swapchain;
+
+	vk::SurfaceCapabilitiesKHR capabilities = physicalDevice.getSurfaceCapabilitiesKHR(*surface);
+	auto surfaceFormats = physicalDevice.getSurfaceFormatsKHR(*surface);
+	auto presentModes = physicalDevice.getSurfacePresentModesKHR(*surface);
+
+	vk::SurfaceFormatKHR surfaceFormat = ChooseSurfaceFormat(surfaceFormats, utils::ETextureFormat::RGBA8_SRGB);
+	vk::PresentModeKHR   presentMode = ChoosePresentMode(presentModes, utils::EPresentMode::Mailbox);
+	vk::Extent2D         extent = ChooseExtent(capabilities, width, height);
+
+	uint32_t imageCount = std::max(3u, capabilities.minImageCount);
+	if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount)
+		imageCount = capabilities.maxImageCount;
+
+	vk::SwapchainCreateInfoKHR createInfo{
+		.surface = *surface,
+		.minImageCount = imageCount,
+		.imageFormat = surfaceFormat.format,
+		.imageColorSpace = surfaceFormat.colorSpace,
+		.imageExtent = extent,
+		.imageArrayLayers = 1,
+		.imageUsage = vk::ImageUsageFlagBits::eColorAttachment
+						  | vk::ImageUsageFlagBits::eTransferDst,
+		.imageSharingMode = vk::SharingMode::eExclusive,
+		.preTransform = capabilities.currentTransform,
+		.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque,
+		.presentMode = presentMode,
+		.clipped = vk::True,
+		.oldSwapchain = oldSwapchain
+	};
+
+	swapchain = vk::raii::SwapchainKHR(device, createInfo);
+	swapchainExtent = extent;
+	swapchainImageFormat = surfaceFormat.format;
+
+	std::vector<vk::Image> vkImages = swapchain.getImages();
+	swapchainImageViews.reserve(vkImages.size());
+
+	for (vk::Image image : vkImages)
+	{
+		vk::ImageViewCreateInfo viewInfo{
+			.image = image,
+			.viewType = vk::ImageViewType::e2D,
+			.format = surfaceFormat.format,
+			.subresourceRange = {
+				.aspectMask = vk::ImageAspectFlagBits::eColor,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		};
+		swapchainImageViews.emplace_back(device, viewInfo);
+
+		PredefinedImageCreateInfo imageInfo{};
+		imageInfo.image = image;
+		imageInfo.extent = extent;
+		imageInfo.aspectFlags = vk::ImageAspectFlagBits::eColor;
+		imageInfo.format = surfaceFormat.format;
+		swapchainImages.emplace_back(std::make_unique<Image>(parent, imageInfo));
+	}
+
+	CreateSyncObjects();
 }
 
 Device::Impl::Impl(const Window& _wnd, const Device* _device) 

@@ -17,6 +17,8 @@ namespace core::gpu
 		explicit Device(const Window& _wnd);
 		~Device() noexcept;
 
+		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
+		
 		Impl& GetImpl() const;
 	};
 }

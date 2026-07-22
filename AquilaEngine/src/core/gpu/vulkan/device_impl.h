@@ -25,6 +25,13 @@ namespace core::gpu
 
 	struct Device::Impl
 	{
+		struct FrameSync
+		{
+			vk::raii::Fence     inFlightFence;
+			vk::raii::Semaphore imageAvailable;
+			vk::raii::Semaphore renderFinished;
+		};
+
 		explicit Impl(const Window& _wnd, const Device* _device);
 		~Impl() noexcept;
 
@@ -34,8 +41,10 @@ namespace core::gpu
 		void PickPhysicalDevice();
 		void CreateLogicalDevice();
 		void CreateSwapchain();
+		void RecreateSwapchain();
 		void CreateDescriptorPool();
 		void CreateCommandPool();
+		void CreateSyncObjects();
 
 		vk::SurfaceFormatKHR	ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& _availableFormats, utils::ETextureFormat _preferredFormat);
 		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
@@ -51,6 +60,7 @@ namespace core::gpu
 		vk::raii::Device					device			= nullptr;
 		vk::raii::Queue						graphicsQueue	= nullptr;
 		uint32_t							queueIndex		= ~0;
+		bool								needsResize		= false;
 
 		vk::raii::SwapchainKHR				swapchain = nullptr;
 		std::vector<vk::raii::ImageView>    swapchainImageViews;
@@ -60,6 +70,9 @@ namespace core::gpu
 
 		std::unique_ptr<DescriptorPool>		descriptorPool;
 		std::unique_ptr<CommandPool>		commandPool;
+
+		std::vector<FrameSync>									frameSyncObjects;
+		std::vector<std::unique_ptr<vk::raii::CommandBuffer>>	tempCmdBufs;
 
 		const core::Window& window;
 
