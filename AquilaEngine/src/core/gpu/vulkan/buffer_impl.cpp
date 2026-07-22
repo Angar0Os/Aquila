@@ -12,26 +12,26 @@ using namespace core::gpu;
 /// == These functions are the actual Vulkan Impl
 
 
-Buffer::Impl::Impl(core::gpu::Buffer& p, const core::gpu::Device* device, const BufferCreateInfo& info)
-	: parent(p), buffer(nullptr), device(device), memory(nullptr), bufferSize(info.size), mappedData(nullptr)
+Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
+	: buffer(nullptr), device(_device), memory(nullptr), bufferSize(_info.size), mappedData(nullptr)
 {
-	if (info.size == 0)
+	if (_info.size == 0)
 	{
 		throw std::runtime_error("Buffer size cannot be zero");
 	}
 
 	vk::BufferCreateInfo bufferInfo{};
 	bufferInfo.flags = {};
-	bufferInfo.size = static_cast<vk::DeviceSize>(info.size);
-	bufferInfo.usage = utils::ToVulkan(info.usage);
+	bufferInfo.size = static_cast<vk::DeviceSize>(_info.size);
+	bufferInfo.usage = utils::ToVulkan(_info.usage);
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
-	buffer = vk::raii::Buffer(device->GetImpl().device, bufferInfo);
+	buffer = vk::raii::Buffer(_device->GetImpl().device, bufferInfo);
 
 	vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
 
 	vk::MemoryAllocateFlagsInfo allocFlagsInfo{};
-	bool needsDeviceAddress = (info.usage & utils::EBufferUsage::ShaderDeviceAddress) != utils::EBufferUsage::None;
+	bool needsDeviceAddress = (_info.usage & utils::EBufferUsage::ShaderDeviceAddress) != utils::EBufferUsage::None;
 
 	if (needsDeviceAddress)
 	{
@@ -42,7 +42,7 @@ Buffer::Impl::Impl(core::gpu::Buffer& p, const core::gpu::Device* device, const 
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = FindMemoryType(
 		memRequirements.memoryTypeBits,
-		utils::ToVulkan(info.memoryProperties)
+		utils::ToVulkan(_info.memoryProperties)
 	);
 
 	if (needsDeviceAddress)
@@ -50,21 +50,21 @@ Buffer::Impl::Impl(core::gpu::Buffer& p, const core::gpu::Device* device, const 
 		allocInfo.pNext = &allocFlagsInfo;
 	}
 
-	memory = vk::raii::DeviceMemory(device->GetImpl().device, allocInfo);
+	memory = vk::raii::DeviceMemory(_device->GetImpl().device, allocInfo);
 
 	buffer.bindMemory(*memory, 0);
 }
 
 Buffer::Impl::~Impl() {}
 
-uint32_t Buffer::Impl::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+uint32_t Buffer::Impl::FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFlags _properties)
 {
 	vk::PhysicalDeviceMemoryProperties memProperties = device->GetImpl().physicalDevice.getMemoryProperties();
 
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
 	{
-		if ((typeFilter & (1 << i)) &&
-			(memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+		if ((_typeFilter & (1 << i)) &&
+			(memProperties.memoryTypes[i].propertyFlags & _properties) == _properties)
 		{
 			return i;
 		}
@@ -76,9 +76,10 @@ uint32_t Buffer::Impl::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFla
 
 /// === These functions are public side impl
 
-Buffer::Buffer(const core::gpu::Device* device, const BufferCreateInfo& info)
+
+Buffer::Buffer(const core::gpu::Device* _device, const BufferCreateInfo& _info)
 {
-	m_impl = std::make_unique<Impl>(*this, device, info);
+	m_impl = std::make_unique<Impl>(_device, _info);
 }
 
 Buffer::~Buffer()
@@ -86,16 +87,16 @@ Buffer::~Buffer()
 	Unmap();
 };
 
-void Buffer::Map(void** data)
+void Buffer::Map(void** _data)
 {
 	if (m_impl->mappedData)
 	{
-		*data = m_impl->mappedData;
+		*_data = m_impl->mappedData;
 		return;
 	}
 
 	m_impl->mappedData = m_impl->memory.mapMemory(0, m_impl->bufferSize);
-	*data = m_impl->mappedData;
+	*_data = m_impl->mappedData;
 }
 
 void Buffer::Unmap()
@@ -107,9 +108,9 @@ void Buffer::Unmap()
 	}
 }
 
-void Buffer::CopyFrom(const void* data, size_t size, size_t offset)
+void Buffer::CopyFrom(const void* _data, size_t _size, size_t _offset)
 {
-	if (offset + size > m_impl->bufferSize)
+	if (_offset + _size > m_impl->bufferSize)
 	{
 		throw std::runtime_error("Copy operation exceeds buffer size");
 	}
@@ -117,7 +118,7 @@ void Buffer::CopyFrom(const void* data, size_t size, size_t offset)
 	void* mappedMem = nullptr;
 	Map(&mappedMem);
 
-	std::memcpy(static_cast<char*>(mappedMem) + offset, data, size);
+	std::memcpy(static_cast<char*>(mappedMem) + _offset, _data, _size);
 }
 
 Buffer::Impl& Buffer::GetImpl() const

@@ -10,8 +10,7 @@ namespace core::gpu
 {
 	struct Buffer::Impl
 	{
-		Buffer& parent;
-		const core::gpu::Device* device;
+		const Device* device;
 
 		vk::raii::Buffer buffer;
 		vk::raii::DeviceMemory memory;
@@ -20,10 +19,9 @@ namespace core::gpu
 		size_t bufferSize;
 		void* mappedData;
 
-		uint32_t FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+		uint32_t FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFlags _properties);
 
-		explicit Impl(Buffer& p, const Device* device,
-			const BufferCreateInfo& info);
+		explicit Impl(const Device* _device, const BufferCreateInfo& _info);
 
 		~Impl() noexcept;
 	};

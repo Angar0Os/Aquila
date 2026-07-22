@@ -31,9 +31,9 @@ namespace core::gpu
 		void CreateLogicalDevice();
 		void CreateSwapchain();
 
-		vk::SurfaceFormatKHR	ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats, utils::ETextureFormat preferredFormat);
-		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes, utils::EPresentMode preferredMode);
-		vk::Extent2D			ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height);
+		vk::SurfaceFormatKHR	ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& _availableFormats, utils::ETextureFormat _preferredFormat);
+		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
+		vk::Extent2D			ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capabilities, uint32_t _width, uint32_t _height);
 
 		vk::raii::Context					context;
 		vk::raii::Instance					instance		= nullptr;

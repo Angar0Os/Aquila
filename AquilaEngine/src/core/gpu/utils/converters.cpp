@@ -125,3 +125,65 @@ vk::MemoryPropertyFlags core::gpu::utils::ToVulkan(core::gpu::utils::EMemoryProp
 
 	return flags;
 }
+
+vk::DescriptorType core::gpu::utils::ToVulkan(core::gpu::utils::EDescriptorType type)
+{
+	switch (type)
+	{
+	case core::gpu::utils::EDescriptorType::UniformBuffer:
+		return vk::DescriptorType::eUniformBuffer;
+	case core::gpu::utils::EDescriptorType::CombinedImageSampler:
+		return vk::DescriptorType::eCombinedImageSampler;
+	case core::gpu::utils::EDescriptorType::StorageBuffer:
+		return vk::DescriptorType::eStorageBuffer;
+	case core::gpu::utils::EDescriptorType::StorageImage:
+		return vk::DescriptorType::eStorageImage;
+	case core::gpu::utils::EDescriptorType::AccelerationStructure:
+		return vk::DescriptorType::eAccelerationStructureKHR;
+	default:
+		throw std::runtime_error("Unknown descriptor type");
+	}
+}
+
+vk::ShaderStageFlagBits core::gpu::utils::ToVulkan(core::gpu::utils::EShaderStageFlags stage)
+{
+	if ((stage & core::gpu::utils::EShaderStageFlags::Vertex) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eVertex;
+	if ((stage & core::gpu::utils::EShaderStageFlags::Fragment) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eFragment;
+	if ((stage & core::gpu::utils::EShaderStageFlags::Compute) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eCompute;
+	if ((stage & core::gpu::utils::EShaderStageFlags::Geometry) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eGeometry;
+	if ((stage & core::gpu::utils::EShaderStageFlags::TessellationControl) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eTessellationControl;
+	if ((stage & core::gpu::utils::EShaderStageFlags::TessellationEvaluation) != core::gpu::utils::EShaderStageFlags::None)
+		return vk::ShaderStageFlagBits::eTessellationEvaluation;
+
+	return vk::ShaderStageFlagBits::eVertex;
+}
+
+vk::ShaderStageFlags core::gpu::utils::ToVulkan(core::gpu::utils::EShaderStage stages)
+{
+	vk::ShaderStageFlags result;
+
+	if ((stages & core::gpu::utils::EShaderStage::Vertex) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eVertex;
+
+	if ((stages & core::gpu::utils::EShaderStage::Fragment) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eFragment;
+
+	if ((stages & core::gpu::utils::EShaderStage::Geometry) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eGeometry;
+
+	if ((stages & core::gpu::utils::EShaderStage::Compute) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eCompute;
+
+	if ((stages & core::gpu::utils::EShaderStage::TessellationControl) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eTessellationControl;
+
+	if ((stages & core::gpu::utils::EShaderStage::TessellationEvaluation) != core::gpu::utils::EShaderStage::None)
+		result |= vk::ShaderStageFlagBits::eTessellationEvaluation;
+
+	return result;
+}

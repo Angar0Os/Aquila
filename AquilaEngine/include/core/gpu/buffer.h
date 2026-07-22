@@ -25,7 +25,7 @@ namespace core::gpu
 		explicit Buffer(const Device* _device, const BufferCreateInfo& _info);
 		~Buffer() noexcept;
 
-		void Map(void** data);
+		void Map(void** _data);
 		void Unmap();
 
 		void CopyFrom(const void* _data, size_t _size, size_t _offset = 0);

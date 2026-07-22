@@ -84,6 +84,76 @@ namespace core::gpu::utils
 	{
 		return static_cast<EMemoryProperty>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 	}
+
+	enum class EDescriptorType
+	{
+		UniformBuffer,
+		CombinedImageSampler,
+		StorageBuffer,
+		StorageImage,
+		AccelerationStructure
+	};
+
+	enum class EShaderStageFlags : uint32_t
+	{
+		None = 0,
+		Vertex = 1 << 0,
+		Fragment = 1 << 1,
+		Compute = 1 << 2,
+		Geometry = 1 << 3,
+		TessellationControl = 1 << 4,
+		TessellationEvaluation = 1 << 5,
+
+		RayGen = 1 << 6,
+		ClosestHit = 1 << 7,
+		AnyHit = 1 << 8,
+		Miss = 1 << 9,
+		Intersection = 1 << 10,
+		Callable = 1 << 11,
+
+		AllGraphics = Vertex | Fragment | Geometry | TessellationControl | TessellationEvaluation,
+		AllRayTracing = RayGen | ClosestHit | AnyHit | Miss | Intersection | Callable
+	};
+
+	inline EShaderStageFlags operator|(EShaderStageFlags a, EShaderStageFlags b)
+	{
+		return static_cast<EShaderStageFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline EShaderStageFlags operator&(EShaderStageFlags a, EShaderStageFlags b)
+	{
+		return static_cast<EShaderStageFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	enum class EShaderStage : uint32_t
+	{
+		None = 0,
+		Vertex = 1 << 0,
+		Fragment = 1 << 1,
+		Compute = 1 << 2,
+		Geometry = 1 << 3,
+		TessellationControl = 1 << 4,
+		TessellationEvaluation = 1 << 5,
+
+		RayGen = 1 << 6,
+		ClosestHit = 1 << 7,
+		AnyHit = 1 << 8,
+		Miss = 1 << 9,
+		Intersection = 1 << 10,
+		Callable = 1 << 11,
+
+		All = 0x7FFFFFFF
+	};
+
+	inline EShaderStage operator|(EShaderStage a, EShaderStage b)
+	{
+		return static_cast<EShaderStage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline EShaderStage operator&(EShaderStage a, EShaderStage b)
+	{
+		return static_cast<EShaderStage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H

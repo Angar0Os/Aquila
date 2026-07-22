@@ -11,6 +11,9 @@ namespace core::gpu::utils
 	vk::Format                  ToVulkan(ETextureFormat format);
 	vk::BufferUsageFlags        ToVulkan(EBufferUsage usage);
 	vk::MemoryPropertyFlags     ToVulkan(EMemoryProperty properties);
+	vk::ShaderStageFlagBits     ToVulkan(EShaderStageFlags stage);
+	vk::ShaderStageFlags        ToVulkan(EShaderStage stages);
+	vk::DescriptorType          ToVulkan(EDescriptorType type);
 
 	vk::ImageAspectFlags        ToVulkanAspestMask(ETextureFormat format);
 }

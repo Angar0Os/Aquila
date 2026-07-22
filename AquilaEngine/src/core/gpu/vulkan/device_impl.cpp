@@ -36,20 +36,20 @@ std::vector<const char*> GetRequiredExtensions()
 	return extensions;
 }
 
-static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT severity,
-	vk::DebugUtilsMessageTypeFlagsEXT type,
+static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT _severity,
+	vk::DebugUtilsMessageTypeFlagsEXT _type,
 	const vk::DebugUtilsMessengerCallbackDataEXT*
-	pCallbackData, void*)
+	_pCallbackData, void*)
 {
-	std::cerr << "validation layer: type " << to_string(type) << " msg: " << pCallbackData->pMessage << std::endl;
+	std::cerr << "validation layer: type " << to_string(_type) << " msg: " << _pCallbackData->pMessage << std::endl;
 	return vk::False;
 }
 
-vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats, utils::ETextureFormat preferredFormat)
+vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& _availableFormats, utils::ETextureFormat _preferredFormat)
 {
-	vk::Format vkPreferredFormat = utils::ToVulkan(preferredFormat);
+	vk::Format vkPreferredFormat = utils::ToVulkan(_preferredFormat);
 
-	for (const auto& format : availableFormats)
+	for (const auto& format : _availableFormats)
 	{
 		if (format.format == vkPreferredFormat &&
 			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
@@ -58,7 +58,7 @@ vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::Sur
 		}
 	}
 
-	for (const auto& format : availableFormats)
+	for (const auto& format : _availableFormats)
 	{
 		if (format.format == vk::Format::eB8G8R8A8Srgb &&
 			format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
@@ -67,14 +67,14 @@ vk::SurfaceFormatKHR Device::Impl::ChooseSurfaceFormat(const std::vector<vk::Sur
 		}
 	}
 
-	return availableFormats[0];
+	return _availableFormats[0];
 }
 
-vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& availableModes, utils::EPresentMode preferredMode)
+vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode)
 {
-	vk::PresentModeKHR vkPreferredMode = utils::ToVulkan(preferredMode);
+	vk::PresentModeKHR vkPreferredMode = utils::ToVulkan(_preferredMode);
 
-	for (const auto& mode : availableModes)
+	for (const auto& mode : _availableModes)
 	{
 		if (mode == vkPreferredMode)
 		{
@@ -85,21 +85,21 @@ vk::PresentModeKHR Device::Impl::ChoosePresentMode(const std::vector<vk::Present
 	return vk::PresentModeKHR::eFifo;
 }
 
-vk::Extent2D Device::Impl::ChooseExtent(const vk::SurfaceCapabilitiesKHR& capabilities, uint32_t width, uint32_t height)
+vk::Extent2D Device::Impl::ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capabilities, uint32_t _width, uint32_t _height)
 {
-	if (capabilities.currentExtent.width != 0xFFFFFFFF)
+	if (_capabilities.currentExtent.width != 0xFFFFFFFF)
 	{
-		return capabilities.currentExtent;
+		return _capabilities.currentExtent;
 	}
 
-	vk::Extent2D actualExtent = { width, height };
+	vk::Extent2D actualExtent = { _width, _height };
 
 	actualExtent.width = std::clamp(actualExtent.width,
-		capabilities.minImageExtent.width,
-		capabilities.maxImageExtent.width);
+		_capabilities.minImageExtent.width,
+		_capabilities.maxImageExtent.width);
 	actualExtent.height = std::clamp(actualExtent.height,
-		capabilities.minImageExtent.height,
-		capabilities.maxImageExtent.height);
+		_capabilities.minImageExtent.height,
+		_capabilities.maxImageExtent.height);
 
 	return actualExtent;
 }
