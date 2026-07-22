@@ -24,6 +24,8 @@ namespace core::gpu
 
 		explicit Impl(Buffer& p, const Device* device,
 			const BufferCreateInfo& info);
+
+		~Impl() noexcept;
 	};
 }
 

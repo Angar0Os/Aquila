@@ -2,6 +2,8 @@
 #define AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H
 #pragma once
 
+#include <cstdint>
+
 namespace core::gpu::utils
 {
 	enum class ETextureFormat

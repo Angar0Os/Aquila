@@ -55,7 +55,7 @@ Buffer::Impl::Impl(core::gpu::Buffer& p, const core::gpu::Device* device, const 
 	buffer.bindMemory(*memory, 0);
 }
 
-Buffer::Impl::~Impl(){}
+Buffer::Impl::~Impl() {}
 
 uint32_t Buffer::Impl::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 {
