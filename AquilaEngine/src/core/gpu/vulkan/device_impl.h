@@ -19,6 +19,8 @@ namespace core { class Window; }
 
 namespace core::gpu
 {
+	class CommandPool;
+	class DescriptorPool;
 	class Image;
 
 	struct Device::Impl
@@ -32,6 +34,8 @@ namespace core::gpu
 		void PickPhysicalDevice();
 		void CreateLogicalDevice();
 		void CreateSwapchain();
+		void CreateDescriptorPool();
+		void CreateCommandPool();
 
 		vk::SurfaceFormatKHR	ChooseSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& _availableFormats, utils::ETextureFormat _preferredFormat);
 		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
@@ -53,6 +57,9 @@ namespace core::gpu
 		vk::Extent2D						swapchainExtent;
 		std::vector<std::unique_ptr<Image>>	swapchainImages; 
 		vk::Format							swapchainImageFormat;
+
+		std::unique_ptr<DescriptorPool>		descriptorPool;
+		std::unique_ptr<CommandPool>		commandPool;
 
 		const core::Window& window;
 

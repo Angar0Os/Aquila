@@ -194,6 +194,25 @@ namespace core::gpu::utils
 		e32 = 32,
 		e64 = 64
 	};
+
+	enum class ECommandPoolCreateFlags
+		: uint32_t
+	{
+		None = 0,
+		Transient = 1 << 0,
+		ResetCommandBuffer = 1 << 1,
+		Protected = 1 << 2
+	};
+
+	inline ECommandPoolCreateFlags operator|(ECommandPoolCreateFlags a, ECommandPoolCreateFlags b)
+	{
+		return static_cast<ECommandPoolCreateFlags>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline ECommandPoolCreateFlags operator&(ECommandPoolCreateFlags a, ECommandPoolCreateFlags b)
+	{
+		return static_cast<ECommandPoolCreateFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H

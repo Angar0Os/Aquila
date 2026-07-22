@@ -18,6 +18,7 @@ namespace core::gpu::utils
 	vk::SampleCountFlagBits     ToVulkan(ESampleCount samples);
 	vk::Format                  ToVulkan(ETextureFormat format);
 	vk::ImageUsageFlags         ToVulkan(EImageUsage usage);
+	vk::CommandPoolCreateFlags	ToVulkan(ECommandPoolCreateFlags flags);
 
 	vk::ImageAspectFlags        ToVulkanAspestMask(ETextureFormat format);
 }

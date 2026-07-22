@@ -240,3 +240,19 @@ vk::ImageUsageFlags core::gpu::utils::ToVulkan(core::gpu::utils::EImageUsage usa
 
 	return flags;
 }
+
+vk::CommandPoolCreateFlags core::gpu::utils::ToVulkan(core::gpu::utils::ECommandPoolCreateFlags flags)
+{
+	vk::CommandPoolCreateFlags vkFlags;
+
+	if (static_cast<int>(flags) & static_cast<int>(core::gpu::utils::ECommandPoolCreateFlags::Transient))
+		vkFlags |= vk::CommandPoolCreateFlagBits::eTransient;
+
+	if (static_cast<int>(flags) & static_cast<int>(core::gpu::utils::ECommandPoolCreateFlags::ResetCommandBuffer))
+		vkFlags |= vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
+
+	if (static_cast<int>(flags) & static_cast<int>(core::gpu::utils::ECommandPoolCreateFlags::Protected))
+		vkFlags |= vk::CommandPoolCreateFlagBits::eProtected;
+
+	return vkFlags;
+}

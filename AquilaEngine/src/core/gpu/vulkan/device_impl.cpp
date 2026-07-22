@@ -1,6 +1,8 @@
 #define NOMINMAX
 
 #include "device_impl.h"
+#include "commandPool_impl.h"
+#include "descriptorPool_impl.h"
 #include "image_impl.h"
 
 #include <core/window.h>
@@ -110,6 +112,9 @@ Device::Device(const Window& _wnd)
 	m_impl->CreateLogicalDevice();
 
 	m_impl->CreateSwapchain();
+
+	m_impl->CreateDescriptorPool();
+	m_impl->CreateCommandPool();
 }
 
 Device::~Device() {}
@@ -456,24 +461,31 @@ void Device::Impl::CreateSwapchain()
 	swapchainImageFormat = surfaceFormat.format;
 }
 
+void Device::Impl::CreateDescriptorPool()
+{
+	descriptorPool = std::make_unique<DescriptorPool>(parent);
+}
+
+void Device::Impl::CreateCommandPool()
+{
+	CommandPoolCreateInfo poolInfo {
+		.queueFamilyIndex = queueIndex,
+		.flags = utils::ECommandPoolCreateFlags::ResetCommandBuffer
+	};
+
+	commandPool = std::make_unique<CommandPool>(parent, poolInfo);
+}
+
 Device::Impl::Impl(const Window& _wnd, const Device* _device) 
 	: window(_wnd), parent(_device)
 {}
 
-Device::Impl::~Impl() {}
+Device::Impl::~Impl() 
+{
+	descriptorPool.reset();
+}
 
 Device::Impl& ::Device::GetImpl() const
 {
 	return *m_impl;
 }
-
-/* 
-TODO : Just to remember
-
-I need to create image impl. To do this i need to implement the following : 
- - Buffer
- - CommandBuffer
- - Acceleration Structure (MaybeNot ?)
- - Pipeline 
- - DescriptorSet
-*/
