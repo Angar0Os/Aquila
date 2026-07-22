@@ -187,3 +187,56 @@ vk::ShaderStageFlags core::gpu::utils::ToVulkan(core::gpu::utils::EShaderStage s
 
 	return result;
 }
+
+vk::ImageTiling core::gpu::utils::ToVulkan(core::gpu::utils::EImageTiling tiling)
+{
+	switch (tiling)
+	{
+		case core::gpu::utils::EImageTiling::Optimal:	return vk::ImageTiling::eOptimal;
+		case core::gpu::utils::EImageTiling::Linear:	return vk::ImageTiling::eLinear;
+		default:										return vk::ImageTiling::eOptimal;
+	}
+}
+
+vk::SampleCountFlagBits core::gpu::utils::ToVulkan(core::gpu::utils::ESampleCount samples)
+{
+	switch (samples)
+	{
+		case core::gpu::utils::ESampleCount::e1:	return vk::SampleCountFlagBits::e1;
+		case core::gpu::utils::ESampleCount::e2:	return vk::SampleCountFlagBits::e2;
+		case core::gpu::utils::ESampleCount::e4:	return vk::SampleCountFlagBits::e4;
+		case core::gpu::utils::ESampleCount::e8:	return vk::SampleCountFlagBits::e8;
+		case core::gpu::utils::ESampleCount::e16:	return vk::SampleCountFlagBits::e16;
+		case core::gpu::utils::ESampleCount::e32:	return vk::SampleCountFlagBits::e32;
+		case core::gpu::utils::ESampleCount::e64:	return vk::SampleCountFlagBits::e64;
+		default:									return vk::SampleCountFlagBits::e1;
+	}
+}
+
+vk::ImageUsageFlags core::gpu::utils::ToVulkan(core::gpu::utils::EImageUsage usage)
+{
+	vk::ImageUsageFlags flags;
+
+	if ((usage & core::gpu::utils::EImageUsage::TransferSrc) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eTransferSrc;
+
+	if ((usage & core::gpu::utils::EImageUsage::TransferDst) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eTransferDst;
+
+	if ((usage & core::gpu::utils::EImageUsage::Sampled) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eSampled;
+
+	if ((usage & core::gpu::utils::EImageUsage::Storage) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eStorage;
+
+	if ((usage & core::gpu::utils::EImageUsage::ColorAttachment) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eColorAttachment;
+
+	if ((usage & core::gpu::utils::EImageUsage::DepthStencilAttachment) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+
+	if ((usage & core::gpu::utils::EImageUsage::InputAttachment) != core::gpu::utils::EImageUsage::None)
+		flags |= vk::ImageUsageFlagBits::eInputAttachment;
+
+	return flags;
+}

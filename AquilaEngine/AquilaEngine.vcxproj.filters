@@ -51,6 +51,9 @@
     <ClCompile Include="src\core\gpu\vulkan\descriptorSetLayout.cpp">
       <Filter>Source Files\core\gpu\vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\gpu\vulkan\image_impl.cpp">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\core\window.h">
@@ -78,6 +81,12 @@
       <Filter>Header Files\core\gpu</Filter>
     </ClInclude>
     <ClInclude Include="src\core\gpu\vulkan\descriptorSetLayout_impl.h">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\gpu\image.h">
+      <Filter>Header Files\core\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\gpu\vulkan\image_impl.h">
       <Filter>Source Files\core\gpu\vulkan</Filter>
     </ClInclude>
   </ItemGroup>

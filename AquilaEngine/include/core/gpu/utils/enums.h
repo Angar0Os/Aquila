@@ -154,6 +154,46 @@ namespace core::gpu::utils
 	{
 		return static_cast<EShaderStage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 	}
+
+	enum class EImageTiling
+	{
+		Optimal,
+		Linear
+	};
+
+	enum class EImageUsage : uint32_t
+	{
+		None = 0,
+		TransferSrc = 1 << 0,
+		TransferDst = 1 << 1,
+		Sampled = 1 << 2,
+		Storage = 1 << 3,
+		ColorAttachment = 1 << 4,
+		DepthStencilAttachment = 1 << 5,
+		TransientAttachment = 1 << 6,
+		InputAttachment = 1 << 7
+	};
+
+	inline EImageUsage operator|(EImageUsage a, EImageUsage b)
+	{
+		return static_cast<EImageUsage>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline EImageUsage operator&(EImageUsage a, EImageUsage b)
+	{
+		return static_cast<EImageUsage>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	enum class ESampleCount
+	{
+		e1 = 1,
+		e2 = 2,
+		e4 = 4,
+		e8 = 8,
+		e16 = 16,
+		e32 = 32,
+		e64 = 64
+	};
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H

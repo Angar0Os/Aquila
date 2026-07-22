@@ -195,18 +195,21 @@
     <ClCompile Include="src\core\gpu\vulkan\buffer_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\descriptorSetLayout.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\device_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\image_impl.cpp" />
     <ClCompile Include="src\core\window.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\core\gpu\buffer.h" />
     <ClInclude Include="include\core\gpu\descriptorSetLayout.h" />
     <ClInclude Include="include\core\gpu\device.h" />
+    <ClInclude Include="include\core\gpu\image.h" />
     <ClInclude Include="include\core\gpu\utils\converters.h" />
     <ClInclude Include="include\core\gpu\utils\enums.h" />
     <ClInclude Include="include\core\window.h" />
     <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\descriptorSetLayout_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\device_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\image_impl.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

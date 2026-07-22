@@ -31,7 +31,7 @@ namespace core::gpu
 		std::unique_ptr<Impl> m_impl;
 
 	public:
-		DescriptorSetLayout(const Device* _device, const DescriptorSetLayoutBinding& _info);
+		DescriptorSetLayout(const Device* _device, const DescriptorSetLayoutCreateInfo& _info);
 		~DescriptorSetLayout();
 
 		Impl& GetImpl() const;

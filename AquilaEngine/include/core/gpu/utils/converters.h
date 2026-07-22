@@ -14,6 +14,10 @@ namespace core::gpu::utils
 	vk::ShaderStageFlagBits     ToVulkan(EShaderStageFlags stage);
 	vk::ShaderStageFlags        ToVulkan(EShaderStage stages);
 	vk::DescriptorType          ToVulkan(EDescriptorType type);
+	vk::ImageTiling             ToVulkan(EImageTiling tiling);
+	vk::SampleCountFlagBits     ToVulkan(ESampleCount samples);
+	vk::Format                  ToVulkan(ETextureFormat format);
+	vk::ImageUsageFlags         ToVulkan(EImageUsage usage);
 
 	vk::ImageAspectFlags        ToVulkanAspestMask(ETextureFormat format);
 }

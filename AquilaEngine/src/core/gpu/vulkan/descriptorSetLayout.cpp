@@ -29,3 +29,16 @@ DescriptorSetLayout::Impl::Impl(const Device* _device, const DescriptorSetLayout
 
 	layout = vk::raii::DescriptorSetLayout(_device->GetImpl().device, layoutInfo);
 }
+
+DescriptorSetLayout::Impl::~Impl() = default;
+
+DescriptorSetLayout::DescriptorSetLayout(const Device* _device, const DescriptorSetLayoutCreateInfo& _info)
+{
+	// TODO : Removing parent in impl initialization may causes bugs. 
+	m_impl = std::make_unique<Impl>(_device, _info);
+}
+
+DescriptorSetLayout::Impl& DescriptorSetLayout::GetImpl() const
+{
+	return *m_impl;
+}
