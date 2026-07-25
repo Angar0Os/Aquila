@@ -8,6 +8,8 @@ namespace core { class Window; }
 
 namespace core::gpu
 {
+	class Image;
+
 	class Device
 	{
 	private:
@@ -17,8 +19,12 @@ namespace core::gpu
 		explicit Device(const Window& _wnd);
 		~Device() noexcept;
 
+		Image* AcquireNextImage();	
+		void Present();
+
 		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
-		
+		uint32_t currentFrame = 0;
+
 		Impl& GetImpl() const;
 	};
 }

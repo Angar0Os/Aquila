@@ -489,7 +489,7 @@ void Device::Impl::CreateSyncObjects()
 	frameSyncObjects.reserve(Device::FRAMES_IN_FLIGHT);
 	for (size_t i = 0; i < Device::FRAMES_IN_FLIGHT; ++i)
 	{
-		FrameSync frameSync{
+		FrameSync frameSync {
 			.inFlightFence = vk::raii::Fence(device, fenceInfo),
 			.imageAvailable = vk::raii::Semaphore(device, semInfo),
 			.renderFinished = vk::raii::Semaphore(device, semInfo)
@@ -581,6 +581,45 @@ void Device::Impl::RecreateSwapchain()
 	}
 
 	CreateSyncObjects();
+}
+
+Image* Device::AcquireNextImage()
+{
+	if (currentFrame >= m_impl->frameSyncObjects.size())
+	{
+		return nullptr;
+	}
+
+	auto& frameSync = m_impl->frameSyncObjects[currentFrame];
+
+	vk::ResultValue<uint32_t> result = m_impl->device.acquireNextImage2KHR(
+		vk::AcquireNextImageInfoKHR{
+			.swapchain = m_impl->swapchain,
+			.timeout = UINT64_MAX,
+			.semaphore = *frameSync.imageAvailable,
+			.fence = m_impl->frameSyncObjects[currentFrame].inFlightFence,
+			.deviceMask = 1
+		}
+	);
+
+	if (result.result == vk::Result::eErrorOutOfDateKHR)
+	{
+		return nullptr;
+	}
+
+	if (result.result != vk::Result::eSuccess &&
+		result.result != vk::Result::eSuboptimalKHR)
+	{
+		return nullptr;
+	}
+
+	m_impl->currentImageIndex = result.value;
+	return m_impl->swapchainImages[m_impl->currentImageIndex].get();
+}
+
+void Device::Present()
+{
+	++currentFrame %= m_impl->frameSyncObjects.size();
 }
 
 Device::Impl::Impl(const Window& _wnd, const Device* _device) 

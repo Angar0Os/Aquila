@@ -63,6 +63,8 @@ namespace core::gpu
 		bool								needsResize		= false;
 
 		vk::raii::SwapchainKHR				swapchain = nullptr;
+		uint32_t							currentImageIndex;
+
 		std::vector<vk::raii::ImageView>    swapchainImageViews;
 		vk::Extent2D						swapchainExtent;
 		std::vector<std::unique_ptr<Image>>	swapchainImages; 
