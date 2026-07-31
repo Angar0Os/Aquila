@@ -19,6 +19,13 @@ namespace core::gpu::utils
 	vk::Format                  ToVulkan(ETextureFormat format);
 	vk::ImageUsageFlags         ToVulkan(EImageUsage usage);
 	vk::CommandPoolCreateFlags	ToVulkan(ECommandPoolCreateFlags flags);
+	vk::VertexInputRate			ToVulkan(EVertexInputRate rate);
+	vk::PrimitiveTopology		ToVulkan(EPrimitiveTopology topology);
+	vk::PolygonMode             ToVulkan(EPolygonMode mode);
+	vk::CullModeFlags           ToVulkan(ECullMode mode);
+	vk::FrontFace               ToVulkan(EFrontFace face);
+	vk::CompareOp               ToVulkan(ECompareOp op);
+	vk::DynamicState			ToVulkan(EDynamicState state);
 
 	vk::ImageAspectFlags        ToVulkanAspestMask(ETextureFormat format);
 }

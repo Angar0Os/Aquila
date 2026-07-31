@@ -256,3 +256,97 @@ vk::CommandPoolCreateFlags core::gpu::utils::ToVulkan(core::gpu::utils::ECommand
 
 	return vkFlags;
 }
+
+vk::VertexInputRate core::gpu::utils::ToVulkan(core::gpu::utils::EVertexInputRate rate)
+{
+	switch (rate)
+	{
+	case core::gpu::utils::EVertexInputRate::Vertex:	return vk::VertexInputRate::eVertex;
+	case core::gpu::utils::EVertexInputRate::Instance:	return vk::VertexInputRate::eInstance;
+	default:											return vk::VertexInputRate::eVertex;
+	}
+}
+
+vk::PrimitiveTopology core::gpu::utils::ToVulkan(core::gpu::utils::EPrimitiveTopology topology)
+{
+	switch (topology)
+	{
+		case core::gpu::utils::EPrimitiveTopology::PointList:		return vk::PrimitiveTopology::ePointList;
+		case core::gpu::utils::EPrimitiveTopology::LineList:		return vk::PrimitiveTopology::eLineList;
+		case core::gpu::utils::EPrimitiveTopology::LineStrip:		return vk::PrimitiveTopology::eLineStrip;
+		case core::gpu::utils::EPrimitiveTopology::TriangleList:	return vk::PrimitiveTopology::eTriangleList;
+		case core::gpu::utils::EPrimitiveTopology::TriangleStrip:	return vk::PrimitiveTopology::eTriangleStrip;
+		case core::gpu::utils::EPrimitiveTopology::TriangleFan:		return vk::PrimitiveTopology::eTriangleFan;
+		default:													return vk::PrimitiveTopology::eTriangleList;
+	}
+}
+
+vk::PolygonMode core::gpu::utils::ToVulkan(core::gpu::utils::EPolygonMode mode)
+{
+	switch (mode)
+	{
+		case core::gpu::utils::EPolygonMode::Fill:  return vk::PolygonMode::eFill;
+		case core::gpu::utils::EPolygonMode::Line:  return vk::PolygonMode::eLine;
+		case core::gpu::utils::EPolygonMode::Point: return vk::PolygonMode::ePoint;
+		default:									return vk::PolygonMode::eFill;
+	}
+}
+
+vk::CullModeFlags core::gpu::utils::ToVulkan(core::gpu::utils::ECullMode mode)
+{
+	vk::CullModeFlags flags;
+
+	if (mode == core::gpu::utils::ECullMode::None)
+		return vk::CullModeFlagBits::eNone;
+
+	if ((mode & core::gpu::utils::ECullMode::Front) != core::gpu::utils::ECullMode::None)
+		flags |= vk::CullModeFlagBits::eFront;
+
+	if ((mode & core::gpu::utils::ECullMode::Back) != core::gpu::utils::ECullMode::None)
+		flags |= vk::CullModeFlagBits::eBack;
+
+	return flags;
+}
+
+vk::FrontFace core::gpu::utils::ToVulkan(core::gpu::utils::EFrontFace face)
+{
+	switch (face)
+	{
+		case core::gpu::utils::EFrontFace::CounterClockwise: return vk::FrontFace::eCounterClockwise;
+		case core::gpu::utils::EFrontFace::Clockwise:        return vk::FrontFace::eClockwise;
+		default:											 return vk::FrontFace::eCounterClockwise;
+	}
+}
+
+vk::CompareOp core::gpu::utils::ToVulkan(core::gpu::utils::ECompareOp op)
+{
+	switch (op)
+	{
+		case core::gpu::utils::ECompareOp::Never:			return vk::CompareOp::eNever;
+		case core::gpu::utils::ECompareOp::Less:			return vk::CompareOp::eLess;
+		case core::gpu::utils::ECompareOp::Equal:			return vk::CompareOp::eEqual;
+		case core::gpu::utils::ECompareOp::LessOrEqual:		return vk::CompareOp::eLessOrEqual;
+		case core::gpu::utils::ECompareOp::Greater:			return vk::CompareOp::eGreater;
+		case core::gpu::utils::ECompareOp::NotEqual:		return vk::CompareOp::eNotEqual;
+		case core::gpu::utils::ECompareOp::GreaterOrEqual:	return vk::CompareOp::eGreaterOrEqual;
+		case core::gpu::utils::ECompareOp::Always:			return vk::CompareOp::eAlways;
+		default:											return vk::CompareOp::eAlways;
+	}
+}
+
+vk::DynamicState core::gpu::utils::ToVulkan(core::gpu::utils::EDynamicState state)
+{
+	switch (state)
+	{
+		case core::gpu::utils::EDynamicState::Viewport:				return vk::DynamicState::eViewport;
+		case core::gpu::utils::EDynamicState::Scissor:				return vk::DynamicState::eScissor;
+		case core::gpu::utils::EDynamicState::LineWidth:			return vk::DynamicState::eLineWidth;
+		case core::gpu::utils::EDynamicState::DepthBias:			return vk::DynamicState::eDepthBias;
+		case core::gpu::utils::EDynamicState::BlendConstants:		return vk::DynamicState::eBlendConstants;
+		case core::gpu::utils::EDynamicState::DepthBounds:			return vk::DynamicState::eDepthBounds;
+		case core::gpu::utils::EDynamicState::StencilCompareMask:	return vk::DynamicState::eStencilCompareMask;
+		case core::gpu::utils::EDynamicState::StencilWriteMask:		return vk::DynamicState::eStencilWriteMask;
+		case core::gpu::utils::EDynamicState::StencilReference:		return vk::DynamicState::eStencilReference;
+		default:													return vk::DynamicState::eViewport;
+	}
+}

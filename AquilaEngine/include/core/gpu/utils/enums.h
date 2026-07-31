@@ -213,6 +213,84 @@ namespace core::gpu::utils
 	{
 		return static_cast<ECommandPoolCreateFlags>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 	}
+
+	enum class EVertexInputRate
+	{
+		Vertex,
+		Instance
+	};
+
+	enum class EPrimitiveTopology
+	{
+		PointList,
+		LineList,
+		LineStrip,
+		TriangleList,
+		TriangleStrip,
+		TriangleFan
+	};
+
+	enum class EPolygonMode
+	{
+		Fill,
+		Line,
+		Point
+	};
+
+	enum class ECullMode : uint32_t
+	{
+		None = 0,
+		Front = 1 << 0,
+		Back = 1 << 1,
+		FrontAndBack = Front | Back
+	};
+
+	inline ECullMode operator|(ECullMode a, ECullMode b)
+	{
+		return static_cast<ECullMode>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+	}
+
+	inline ECullMode operator&(ECullMode a, ECullMode b)
+	{
+		return static_cast<ECullMode>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+	}
+
+	enum class EFrontFace
+	{
+		CounterClockwise,
+		Clockwise
+	};
+
+	enum class ECompareOp
+	{
+		Never,
+		Less,
+		Equal,
+		LessOrEqual,
+		Greater,
+		NotEqual,
+		GreaterOrEqual,
+		Always
+	};
+
+	enum class EDynamicState
+	{
+		Viewport,
+		Scissor,
+		LineWidth,
+		DepthBias,
+		BlendConstants,
+		DepthBounds,
+		StencilCompareMask,
+		StencilWriteMask,
+		StencilReference
+	};
+
+	enum class ECommandBufferLevel
+	{
+		Primary,
+		Secondary
+	};
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H

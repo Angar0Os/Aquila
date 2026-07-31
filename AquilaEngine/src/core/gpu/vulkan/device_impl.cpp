@@ -585,6 +585,9 @@ void Device::Impl::RecreateSwapchain()
 
 Image* Device::AcquireNextImage()
 {
+	m_impl->device.waitForFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence, VK_TRUE, UINT64_MAX);
+	m_impl->device.resetFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence);
+
 	if (currentFrame >= m_impl->frameSyncObjects.size())
 	{
 		return nullptr;
@@ -619,6 +622,32 @@ Image* Device::AcquireNextImage()
 
 void Device::Present()
 {
+	if (currentFrame >= m_impl->frameSyncObjects.size()) return;
+
+	auto& frameSync = m_impl->frameSyncObjects[currentFrame];
+	vk::Semaphore presentWait = *frameSync.renderFinished;
+
+	vk::PresentInfoKHR presentInfo{
+		.waitSemaphoreCount = 1,
+		.pWaitSemaphores = &presentWait,
+		.swapchainCount = 1,
+		.pSwapchains = &*m_impl->swapchain,
+		.pImageIndices = &m_impl->currentImageIndex
+	};
+
+	try
+	{
+		vk::Result result = m_impl->graphicsQueue.presentKHR(presentInfo);
+		if (result == vk::Result::eSuboptimalKHR)
+		{
+			m_impl->needsResize = true;
+		}
+	}
+	catch (const vk::OutOfDateKHRError&)
+	{
+		m_impl->needsResize = true;
+	}
+
 	++currentFrame %= m_impl->frameSyncObjects.size();
 }
 
@@ -631,7 +660,7 @@ Device::Impl::~Impl()
 	descriptorPool.reset();
 }
 
-Device::Impl& ::Device::GetImpl() const
+Device::Impl& ::Device::GetImpl() const	
 {
 	return *m_impl;
 }

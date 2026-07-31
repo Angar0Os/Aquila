@@ -17,6 +17,9 @@ int main(int argc, char** argv)
 	while (!window->ShouldClose())
 	{
 		window->PollEvents();
+
+		gpu->AcquireNextImage();
+		gpu->Present();
 	}
 
 	return 0;
