@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <vector>
+#include <functional>
 
 #include <core/gpu/utils/enums.h>
 
@@ -15,24 +16,23 @@ namespace core::gpu
 	class Image;
 	class Pipeline; 
 
-	struct CommandBufferCreateInfo
-	{
-		const Device* device;
-		utils::ECommandBufferLevel level = utils::ECommandBufferLevel::Primary;
-		uint32_t count = 1;
-		bool singleTime = false;
-	};
-
 	class CommandBuffer
 	{
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> m_impl;
 	public:
-		CommandBuffer(const core::gpu::Device* _device, const CommandBufferCreateInfo& _info);
+		CommandBuffer(const Device& _device);
 		~CommandBuffer();
 
+		bool IsCpuFree() const;
+		bool IsGpuFree() const;
 
+		void WaitForCompletion();
+
+		void Record(std::function<void()> content);
+
+		Impl& GetImpl() const;
 	};
 }
 

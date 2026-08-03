@@ -7,7 +7,6 @@ core::gpu::DescriptorPool::Impl::Impl(DescriptorPool& _pool,
 	const Device* _device)
 	: device(_device), pool(nullptr)
 {
-
 	std::vector<vk::DescriptorPoolSize> poolSizes = {
 		{ vk::DescriptorType::eUniformBuffer,            1024 },
 		{ vk::DescriptorType::eStorageBuffer,            1024 },

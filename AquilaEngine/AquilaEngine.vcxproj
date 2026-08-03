@@ -193,6 +193,7 @@
   <ItemGroup>
     <ClCompile Include="src\core\gpu\utils\converters.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\buffer_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\commandBuffer_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\commandPool_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\descriptorPool_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\descriptorSetLayout.cpp" />
@@ -214,6 +215,7 @@
     <ClInclude Include="include\core\gpu\utils\enums.h" />
     <ClInclude Include="include\core\window.h" />
     <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\commandBuffer_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\commandPool_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\descriptorPool_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\descriptorSetLayout_impl.h" />
