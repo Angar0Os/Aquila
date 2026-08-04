@@ -28,12 +28,17 @@ namespace core::gpu
 		bool IsCpuFree() const;
 		bool IsGpuFree() const;
 
-		void WaitForCompletion();
+		void Record(std::function<void()> _content);
 
-		void Record(std::function<void()> content);
+		void Submit(const Device& _device, uint32_t _frameIndex, bool isImmediate = false);
+
+		template<typename T>
+		void Bind(T& _input);
+		
+		template<typename T>
+		void Bind(const DescriptorSet& _dsSet, T& _input, uint32_t _firstSet);
 
 		Impl& GetImpl() const;
-	};
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_COMMAND_BUFFER_H

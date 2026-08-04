@@ -14,6 +14,7 @@ namespace core::gpu
 		vk::raii::Fence			isGpuFree		= nullptr;
 		bool					isCpuFree		= true;
 		bool					isSingleTime	= false;
+		vk::PipelineBindPoint	lastBoundPipeline;
 	};
 
 }

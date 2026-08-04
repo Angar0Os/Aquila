@@ -14,6 +14,7 @@ namespace core::gpu
 
 		vk::raii::Buffer buffer;
 		vk::raii::DeviceMemory memory;
+		utils::EBufferUsage usage;
 
 
 		size_t bufferSize;

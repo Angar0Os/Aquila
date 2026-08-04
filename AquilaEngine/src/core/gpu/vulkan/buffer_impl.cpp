@@ -47,6 +47,7 @@ Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
 	}
 
 	memory = vk::raii::DeviceMemory(_device->GetImpl().device, allocInfo);
+	usage = _info.usage;
 
 	buffer.bindMemory(*memory, 0);
 }
