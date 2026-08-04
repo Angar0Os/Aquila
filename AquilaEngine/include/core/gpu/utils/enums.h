@@ -291,6 +291,12 @@ namespace core::gpu::utils
 		Primary,
 		Secondary
 	};
+
+	enum class EAccelerationStructureType
+	{
+		BottomLevel,
+		TopLevel
+	};
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_ENUMS_H

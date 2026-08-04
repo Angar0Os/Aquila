@@ -101,6 +101,13 @@ void Buffer::Unmap()
 	}
 }
 
+uint64_t Buffer::GetDeviceAddress() const
+{
+	vk::BufferDeviceAddressInfo addressInfo{};
+	addressInfo.buffer = *m_impl->buffer;
+	return m_impl->device->GetImpl().device.getBufferAddress(addressInfo);
+}
+
 void Buffer::CopyFrom(const void* _data, size_t _size, size_t _offset)
 {
 	if (_offset + _size > m_impl->bufferSize)

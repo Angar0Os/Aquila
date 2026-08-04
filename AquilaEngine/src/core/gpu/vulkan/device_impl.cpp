@@ -195,10 +195,10 @@ void Device::Impl::SetupDebugMessenger()
 	debugMessenger = instance.createDebugUtilsMessengerEXT(debugUtilsMessengerCreateInfoEXT);
 }
 
-void ::Device::Impl::CreateSurface()
+void Device::Impl::CreateSurface()
 {
 	GLFWwindow* glfwWindow = window.GetHandle();
-	if (!glfwWindow) 
+	if (!glfwWindow)
 	{
 		throw std::runtime_error("Invalid GLFW window handle!");
 	}
@@ -210,7 +210,7 @@ void ::Device::Impl::CreateSurface()
 	{
 		throw std::runtime_error("Failed to create window surface. Error code: " + std::to_string(result));
 	}
-	
+
 	surface = vk::raii::SurfaceKHR(instance, _surface);
 }
 
@@ -470,7 +470,7 @@ void Device::Impl::CreateDescriptorPool()
 
 void Device::Impl::CreateCommandPool()
 {
-	CommandPoolCreateInfo poolInfo {
+	CommandPoolCreateInfo poolInfo{
 		.queueFamilyIndex = queueIndex,
 		.flags = utils::ECommandPoolCreateFlags::ResetCommandBuffer
 	};
@@ -489,7 +489,7 @@ void Device::Impl::CreateSyncObjects()
 	frameSyncObjects.reserve(Device::FRAMES_IN_FLIGHT);
 	for (size_t i = 0; i < Device::FRAMES_IN_FLIGHT; ++i)
 	{
-		FrameSync frameSync {
+		FrameSync frameSync{
 			.inFlightFence = vk::raii::Fence(device, fenceInfo),
 			.imageAvailable = vk::raii::Semaphore(device, semInfo),
 			.renderFinished = vk::raii::Semaphore(device, semInfo)
@@ -651,16 +651,17 @@ void Device::Present()
 	++currentFrame %= m_impl->frameSyncObjects.size();
 }
 
-Device::Impl::Impl(const Window& _wnd, const Device* _device) 
+Device::Impl::Impl(const Window& _wnd, const Device* _device)
 	: window(_wnd), parent(_device)
-{}
+{
+}
 
-Device::Impl::~Impl() 
+Device::Impl::~Impl()
 {
 	descriptorPool.reset();
 }
 
-Device::Impl& ::Device::GetImpl() const	
+Device::Impl& Device::GetImpl() const
 {
 	return *m_impl;
 }

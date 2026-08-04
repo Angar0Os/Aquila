@@ -12,7 +12,7 @@ namespace core::gpu
 	struct DescriptorSet::Impl
 	{
 		vk::raii::DescriptorSet descriptorSet = nullptr;
-		
+
 		std::vector<vk::DescriptorBufferInfo>						bufferInfos;
 		std::vector<vk::DescriptorImageInfo>						imageInfos;
 		std::vector<vk::AccelerationStructureKHR>					asHandles;

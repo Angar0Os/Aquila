@@ -1,9 +1,11 @@
 #include "descriptorSet_impl.h"
+#include "accelerationStructure_impl.h"
 #include "buffer_impl.h"
 #include "descriptorSetLayout_impl.h"
 #include "descriptorPool_impl.h"
 #include "device_impl.h"
 #include "image_impl.h"
+#include "texture_impl.h"
 
 using namespace core::gpu;
 
@@ -29,24 +31,22 @@ DescriptorSet::DescriptorSet(const Device& _device, const DescriptorSetLayout& _
 
 DescriptorSet::~DescriptorSet() = default;
 
-//template<>
-//void DescriptorSet::Bind<Texture>(uint32_t binding, const Texture& texture)
-//{
-//	size_t infoIndex = m_impl->imageInfos.size();
-//	m_impl->imageInfos.emplace_back(
-//		*texture.GetImpl().sampler,
-//		*texture.GetImpl().image->GetImpl().view,
-//		vk::ImageLayout::eShaderReadOnlyOptimal
-//	);
-//
-//	m_impl->bindingInfos.push_back({
-//		binding,
-//		vk::DescriptorType::eCombinedImageSampler,
-//		infoIndex
-//		});
-//}
+template<>
+void DescriptorSet::Bind<Texture>(uint32_t binding, const Texture& texture)
+{
+	size_t infoIndex = m_impl->imageInfos.size();
+	m_impl->imageInfos.emplace_back(
+		*texture.GetImpl().sampler,
+		*texture.GetImpl().image->GetImpl().view,
+		vk::ImageLayout::eShaderReadOnlyOptimal
+	);
 
-// TODO : Implement texture.
+	m_impl->bindingInfos.push_back({
+		binding,
+		vk::DescriptorType::eCombinedImageSampler,
+		infoIndex
+		});
+}
 
 template<>
 void DescriptorSet::Bind<Image>(uint32_t _binding, const Image& _image)
@@ -82,29 +82,27 @@ void core::gpu::DescriptorSet::Bind<core::gpu::Buffer>(uint32_t _binding, const 
 		});
 }
 
-//template<>
-//void DescriptorSet::Bind<AccelerationStructure>(uint32_t _binding, const AccelerationStructure& _accelStructure)
-//{
-//	vk::AccelerationStructureKHR handle = static_cast<vk::AccelerationStructureKHR>(*_accelStructure.GetImpl().accelerationStructure);
-//
-//	m_impl->asHandles.push_back(handle);
-//
-//	vk::WriteDescriptorSetAccelerationStructureKHR asWrite{};
-//	asWrite.sType = vk::StructureType::eWriteDescriptorSetAccelerationStructureKHR;
-//	asWrite.accelerationStructureCount = 1;
-//	asWrite.pAccelerationStructures = &m_impl->asHandles.back();
-//
-//	size_t infoIndex = m_impl->asInfos.size();
-//	m_impl->asInfos.push_back(asWrite);
-//
-//	m_impl->bindingInfos.push_back({
-//		_binding,
-//		vk::DescriptorType::eAccelerationStructureKHR,
-//		infoIndex
-//		});
-//}
+template<>
+void DescriptorSet::Bind<AccelerationStructure>(uint32_t _binding, const AccelerationStructure& _accelStructure)
+{
+	vk::AccelerationStructureKHR handle = static_cast<vk::AccelerationStructureKHR>(*_accelStructure.GetImpl().accelerationStructure);
 
-// TODO : Implement Accel Structure
+	m_impl->asHandles.push_back(handle);
+
+	vk::WriteDescriptorSetAccelerationStructureKHR asWrite{};
+	asWrite.sType = vk::StructureType::eWriteDescriptorSetAccelerationStructureKHR;
+	asWrite.accelerationStructureCount = 1;
+	asWrite.pAccelerationStructures = &m_impl->asHandles.back();
+
+	size_t infoIndex = m_impl->asInfos.size();
+	m_impl->asInfos.push_back(asWrite);
+
+	m_impl->bindingInfos.push_back({
+		_binding,
+		vk::DescriptorType::eAccelerationStructureKHR,
+		infoIndex
+		});
+}
 
 void DescriptorSet::Update(const Device& device)
 {

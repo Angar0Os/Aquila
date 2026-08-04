@@ -50,24 +50,24 @@ namespace core::gpu
 		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
 		vk::Extent2D			ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capabilities, uint32_t _width, uint32_t _height);
 
-		const Device*						parent			= nullptr;
+		const Device* parent = nullptr;
 
 		vk::raii::Context					context;
-		vk::raii::Instance					instance		= nullptr;
-		vk::raii::DebugUtilsMessengerEXT	debugMessenger	= nullptr;
-		vk::raii::SurfaceKHR				surface			= nullptr;
-		vk::raii::PhysicalDevice			physicalDevice	= nullptr;
-		vk::raii::Device					device			= nullptr;
-		vk::raii::Queue						graphicsQueue	= nullptr;
-		uint32_t							queueIndex		= ~0;
-		bool								needsResize		= false;
+		vk::raii::Instance					instance = nullptr;
+		vk::raii::DebugUtilsMessengerEXT	debugMessenger = nullptr;
+		vk::raii::SurfaceKHR				surface = nullptr;
+		vk::raii::PhysicalDevice			physicalDevice = nullptr;
+		vk::raii::Device					device = nullptr;
+		vk::raii::Queue						graphicsQueue = nullptr;
+		uint32_t							queueIndex = ~0;
+		bool								needsResize = false;
 
-		vk::raii::SwapchainKHR				swapchain			= nullptr;
-		uint32_t							currentImageIndex	= 0;
+		vk::raii::SwapchainKHR				swapchain = nullptr;
+		uint32_t							currentImageIndex = 0;
 
 		std::vector<vk::raii::ImageView>    swapchainImageViews;
 		vk::Extent2D						swapchainExtent;
-		std::vector<std::unique_ptr<Image>>	swapchainImages; 
+		std::vector<std::unique_ptr<Image>>	swapchainImages;
 		vk::Format							swapchainImageFormat;
 
 		std::unique_ptr<DescriptorPool>		descriptorPool;

@@ -29,6 +29,7 @@ namespace core::gpu
 		void Unmap();
 
 		void CopyFrom(const void* _data, size_t _size, size_t _offset = 0);
+		uint64_t GetDeviceAddress() const;
 
 		Impl& GetImpl() const;
 	};
