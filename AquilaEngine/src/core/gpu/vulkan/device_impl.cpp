@@ -2,6 +2,7 @@
 
 #include "device_impl.h"
 #include "commandPool_impl.h"
+#include "commandBuffer_impl.h"
 #include "descriptorPool_impl.h"
 #include "image_impl.h"
 
@@ -618,6 +619,38 @@ Image* Device::AcquireNextImage()
 
 	m_impl->currentImageIndex = result.value;
 	return m_impl->swapchainImages[m_impl->currentImageIndex].get();
+}
+
+CommandBuffer* Device::AcquireCommandBuffer()
+{
+	for (auto& [_, cb] : m_impl->commandBuffers)
+	{
+		bool isFree = cb->GetImpl().isCpuFree && (cb->GetImpl().isGpuFree.getStatus() == vk::Result::eSuccess);
+
+		if (isFree)
+		{
+			cb->GetImpl().isCpuFree = false;
+			return cb.get();
+		}
+	}
+
+	auto cb = std::make_unique<CommandBuffer>(*this);
+	cb->GetImpl().isCpuFree = false;
+
+	auto cbPtr = cb.get();
+
+	m_impl->commandBuffers[cbPtr] = std::move(cb);
+	return cbPtr;
+}
+
+void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer)
+{
+	if (m_impl->commandBuffers.contains(commandBuffer))
+	{
+		commandBuffer->GetImpl().isCpuFree = true; 
+	}
+
+	commandBuffer = nullptr;
 }
 
 void Device::Present()

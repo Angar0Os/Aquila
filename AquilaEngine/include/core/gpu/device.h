@@ -8,6 +8,7 @@ namespace core { class Window; }
 
 namespace core::gpu
 {
+	class CommandBuffer;
 	class Image;
 
 	class Device
@@ -20,6 +21,10 @@ namespace core::gpu
 		~Device() noexcept;
 
 		Image* AcquireNextImage();	
+
+		CommandBuffer* AcquireCommandBuffer();
+		void ReleaseCommandBuffer(CommandBuffer*& commandBuffer);
+
 		void Present();
 
 		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;

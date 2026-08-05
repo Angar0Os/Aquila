@@ -6,7 +6,7 @@
 
 using namespace core::gpu;
 
-AccelerationStructure::AccelerationStructure(const Device& _device, const AccelerationStructureCreateInfo& _info)
+AccelerationStructure::AccelerationStructure(Device& _device, const AccelerationStructureCreateInfo& _info)
 	: m_impl(new Impl)
 {
 	if (_info.preferFastTrace)
@@ -18,6 +18,8 @@ AccelerationStructure::AccelerationStructure(const Device& _device, const Accele
 		CreateBottomLevel(_device, _info);
 	else
 		CreateTopLevel(_device, _info);
+
+	Build(_device);
 }
 
 core::gpu::AccelerationStructure::~AccelerationStructure() = default;
@@ -175,7 +177,7 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 		vkInstance.mask = instance.mask;
 		vkInstance.instanceShaderBindingTableRecordOffset = instance.instanceShaderBindingTableRecordOffset & 0x00FFFFFF;
 		vkInstance.flags = static_cast<VkGeometryInstanceFlagsKHR>(vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable);
-		vkInstance.accelerationStructureReference = instance.blas->GetDeviceAddress();
+		vkInstance.accelerationStructureReference = instance.blas->GetDeviceAddress(_device);
 
 		vkInstances.push_back(vkInstance);
 	}
@@ -223,7 +225,7 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 	m_impl->accelerationStructure.emplace(_device.GetImpl().device, createInfo);
 }
 
-void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
+void AccelerationStructure::Build(Device& _device)
 {
 	if (!m_impl->accelerationStructure.has_value())
 	{
@@ -315,7 +317,12 @@ void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
 			buildRangePtrs.push_back(&range);
 		}
 
-		_cmdBuf->GetImpl().commandBuffer.buildAccelerationStructuresKHR({buildInfo}, buildRangePtrs);
+		auto* commandBuffer = _device.AcquireCommandBuffer();
+		commandBuffer->Record([&]() {
+			commandBuffer->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
+			});
+		commandBuffer->Submit(_device, _device.currentFrame);
+		_device.ReleaseCommandBuffer(commandBuffer);
 	}
 	else
 	{
@@ -369,8 +376,20 @@ void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
 
 		std::vector<vk::AccelerationStructureBuildRangeInfoKHR*> buildRangePtrs = { &rangeInfo };
 
-		_cmdBuf->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
+		auto* commandBuffer = _device.AcquireCommandBuffer();
+		commandBuffer->Record([&]() {
+			commandBuffer->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
+			});
+		commandBuffer->Submit(_device, _device.currentFrame);
+		_device.ReleaseCommandBuffer(commandBuffer);
 	}
+}
+
+uint64_t AccelerationStructure::GetDeviceAddress(const Device& _device) const
+{
+	vk::AccelerationStructureDeviceAddressInfoKHR addressInfo{};
+	addressInfo.accelerationStructure = **m_impl->accelerationStructure;
+	return _device.GetImpl().device.getAccelerationStructureAddressKHR(addressInfo);
 }
 
 AccelerationStructure::Impl& core::gpu::AccelerationStructure::GetImpl() const

@@ -546,12 +546,19 @@ void CommandBuffer::PushConstants(const Pipeline& _pipeline, uint32_t _stageFlag
 	);
 }
 
-void CommandBuffer::BuildAccelerationStructure(const AccelerationStructure& _accelerationStructure)
-{
-}
-
 void CommandBuffer::AccelerationStructureBarrier()
 {
+	auto barrier = vk::MemoryBarrier2{};
+	barrier.srcStageMask = vk::PipelineStageFlagBits2::eAccelerationStructureBuildKHR;
+	barrier.srcAccessMask = vk::AccessFlagBits2::eAccelerationStructureWriteKHR;
+	barrier.dstStageMask = vk::PipelineStageFlagBits2::eRayTracingShaderKHR | vk::PipelineStageFlagBits2::eComputeShader | vk::PipelineStageFlagBits2::eFragmentShader;
+	barrier.dstAccessMask = vk::AccessFlagBits2::eAccelerationStructureReadKHR;;
+
+	auto dep = vk::DependencyInfo{};
+	dep.memoryBarrierCount = 1;
+	dep.pMemoryBarriers = &barrier;
+
+	m_impl->commandBuffer.pipelineBarrier2(dep);
 }
 
 CommandBuffer::Impl& CommandBuffer::GetImpl() const

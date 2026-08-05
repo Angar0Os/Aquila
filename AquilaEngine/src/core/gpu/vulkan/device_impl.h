@@ -9,6 +9,8 @@
 #include <core/gpu/device.h>
 #include <core/gpu/utils/enums.h>
 
+#include <unordered_map>
+
 #ifdef NDEBUG
 constexpr bool enableValidationLayers = false;
 #else
@@ -72,6 +74,7 @@ namespace core::gpu
 
 		std::unique_ptr<DescriptorPool>		descriptorPool;
 		std::unique_ptr<CommandPool>		commandPool;
+		std::unordered_map<CommandBuffer*, std::unique_ptr<CommandBuffer>> commandBuffers;
 
 		std::vector<FrameSync>									frameSyncObjects;
 		std::vector<std::unique_ptr<vk::raii::CommandBuffer>>	tempCmdBufs;
