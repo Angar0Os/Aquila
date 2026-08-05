@@ -14,7 +14,7 @@ namespace core::gpu
 	class DescriptorSet;
 	class Device;
 	class Image;
-	class Pipeline; 
+	class Pipeline;
 
 	class CommandBuffer
 	{
@@ -24,19 +24,19 @@ namespace core::gpu
 	public:
 		struct RenderingAttachmentInfo
 		{
-			const Image*			image	= nullptr;
-			bool                    clear	= true;
-			float                   clearR	= 0.0f;
-			float                   clearG	= 0.0f;
-			float                   clearB	= 0.0f;
-			float                   clearA	= 1.0f;
+			const Image* image = nullptr;
+			bool                    clear = true;
+			float                   clearR = 0.0f;
+			float                   clearG = 0.0f;
+			float                   clearB = 0.0f;
+			float                   clearA = 1.0f;
 		};
 
 		struct DepthAttachmentInfo
 		{
-			const Image*			image		= nullptr;
-			bool                    clear		= true;
-			float                   clearDepth	= 1.0f;
+			const Image* image = nullptr;
+			bool                    clear = true;
+			float                   clearDepth = 1.0f;
 		};
 
 		CommandBuffer(const Device& _device);
@@ -51,7 +51,7 @@ namespace core::gpu
 
 		template<typename T>
 		void Bind(T& _input);
-		
+
 		template<typename T>
 		void Bind(const DescriptorSet& _dsSet, T& _input, uint32_t _firstSet);
 
@@ -77,6 +77,7 @@ namespace core::gpu
 		void TraceRays();
 
 		Impl& GetImpl() const;
+	};
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_COMMAND_BUFFER_H

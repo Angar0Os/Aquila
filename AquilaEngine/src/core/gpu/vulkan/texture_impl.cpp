@@ -26,7 +26,7 @@ Texture::Texture(const Device& _device, const Image& _image)
     m_impl->sampler = vk::raii::Sampler(_device.GetImpl().device, samplerInfo);
 }
 
-Texture::Impl::~Impl() = default;
+Texture::~Texture() = default;
 
 Texture::Impl& Texture::GetImpl() const
 {

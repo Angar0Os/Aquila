@@ -62,10 +62,10 @@ namespace core::gpu
 
         void Build(const CommandBuffer* _cmdBuf);
 
-        void CreateBottomLevel(const AccelerationStructureCreateInfo& _info);
-        void CreateTopLevel(const AccelerationStructureCreateInfo& _info);
-        void CreateAccelerationStructureBuffer(uint32_t _size);
-        void CreateScratchBuffer(uint32_t size);
+        void CreateBottomLevel(const Device& _device, const AccelerationStructureCreateInfo& _info);
+        void CreateTopLevel(const Device& _device, const AccelerationStructureCreateInfo& _info);
+        void CreateAccelerationStructureBuffer(const Device& _device, uint32_t _size);
+        void CreateScratchBuffer(const Device& _device, uint32_t size);
 
         Impl& GetImpl() const;
     };

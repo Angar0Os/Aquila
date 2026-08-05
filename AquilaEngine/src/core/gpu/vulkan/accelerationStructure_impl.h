@@ -11,8 +11,6 @@ namespace core::gpu
 {
 	struct AccelerationStructure::Impl
 	{
-		const Device& device;
-
 		std::optional<vk::raii::AccelerationStructureKHR>	accelerationStructure;
 		std::unique_ptr<Buffer>								buffer;
 		std::unique_ptr<Buffer>								scratchBuffer;

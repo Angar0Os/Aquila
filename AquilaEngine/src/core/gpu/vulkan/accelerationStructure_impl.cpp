@@ -15,12 +15,14 @@ AccelerationStructure::AccelerationStructure(const Device& _device, const Accele
 		m_impl->buildFlags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
 
 	if (m_impl->type == utils::EAccelerationStructureType::BottomLevel)
-		CreateBottomLevel(_info);
+		CreateBottomLevel(_device, _info);
 	else
-		CreateTopLevel(_info);
+		CreateTopLevel(_device, _info);
 }
 
-void AccelerationStructure::CreateAccelerationStructureBuffer(uint32_t _size)
+core::gpu::AccelerationStructure::~AccelerationStructure() = default;
+
+void AccelerationStructure::CreateAccelerationStructureBuffer(const Device& _device, uint32_t _size)
 {
 	BufferCreateInfo bufferInfo
 	{
@@ -29,12 +31,12 @@ void AccelerationStructure::CreateAccelerationStructureBuffer(uint32_t _size)
 		.memoryProperties = utils::EMemoryProperty::DeviceLocal
 	};
 
-	m_impl->buffer = std::make_unique<Buffer>(m_impl->device, bufferInfo);
+	m_impl->buffer = std::make_unique<Buffer>(&_device, bufferInfo);
 }
 
-void AccelerationStructure::CreateScratchBuffer(uint32_t _size)
+void AccelerationStructure::CreateScratchBuffer(const Device& _device, uint32_t _size)
 {
-	auto chain = m_impl->device->GetImpl().physicalDevice
+	auto chain = _device.GetImpl().physicalDevice
 		.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
 
 	const auto& accelProps = chain.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
@@ -50,7 +52,7 @@ void AccelerationStructure::CreateScratchBuffer(uint32_t _size)
 		.memoryProperties = utils::EMemoryProperty::DeviceLocal
 	};
 
-	m_impl->scratchBuffer = std::make_unique<Buffer>(m_impl->device, bufferInfo);
+	m_impl->scratchBuffer = std::make_unique<Buffer>(&_device, bufferInfo);
 
 	VkDeviceAddress scratchAddr = m_impl->scratchBuffer->GetDeviceAddress();
 	if (scratchAddr == 0) {
@@ -58,7 +60,7 @@ void AccelerationStructure::CreateScratchBuffer(uint32_t _size)
 	}
 }
 
-void AccelerationStructure::CreateBottomLevel(const AccelerationStructureCreateInfo& _info)
+void AccelerationStructure::CreateBottomLevel(const Device& _device, const AccelerationStructureCreateInfo& _info)
 {
 	if (m_impl->geometries.empty())
 		throw std::runtime_error("BLAS requires at least one geometry");
@@ -126,7 +128,7 @@ void AccelerationStructure::CreateBottomLevel(const AccelerationStructureCreateI
 	buildInfo.setGeometryCount(static_cast<uint32_t>(vkGeometries.size()));
 	buildInfo.setPGeometries(vkGeometries.data());
 
-	m_impl->buildSizes = m_impl->device->GetImpl().device.getAccelerationStructureBuildSizesKHR(
+	m_impl->buildSizes = _device.GetImpl().device.getAccelerationStructureBuildSizesKHR(
 		vk::AccelerationStructureBuildTypeKHR::eDevice,
 		buildInfo,
 		maxPrimitiveCounts
@@ -135,18 +137,18 @@ void AccelerationStructure::CreateBottomLevel(const AccelerationStructureCreateI
 	if (m_impl->buildSizes.accelerationStructureSize == 0)
 		throw std::runtime_error("getAccelerationStructureBuildSizesKHR returned zero accelerationStructureSize");
 
-	CreateAccelerationStructureBuffer(m_impl->buildSizes.accelerationStructureSize);
-	CreateScratchBuffer(m_impl->buildSizes.buildScratchSize);
+	CreateAccelerationStructureBuffer(_device, m_impl->buildSizes.accelerationStructureSize);
+	CreateScratchBuffer(_device, m_impl->buildSizes.buildScratchSize);
 
 	vk::AccelerationStructureCreateInfoKHR createInfo{};
 	createInfo.buffer = *m_impl->buffer->GetImpl().buffer;
 	createInfo.size = m_impl->buildSizes.accelerationStructureSize;
 	createInfo.type = vk::AccelerationStructureTypeKHR::eBottomLevel;
 
-	m_impl->accelerationStructure.emplace(m_impl->device->GetImpl().device, createInfo);
+	m_impl->accelerationStructure.emplace(_device.GetImpl().device, createInfo);
 }
 
-void AccelerationStructure::CreateTopLevel(const AccelerationStructureCreateInfo& _info)
+void AccelerationStructure::CreateTopLevel(const Device& _device, const AccelerationStructureCreateInfo& _info)
 {
 	if (m_impl->instances.empty())
 		throw std::runtime_error("TLAS requires at least one instance");
@@ -157,7 +159,7 @@ void AccelerationStructure::CreateTopLevel(const AccelerationStructureCreateInfo
 		.memoryProperties = utils::EMemoryProperty::HostVisible | utils::EMemoryProperty::HostCoherent
 	};
 
-	m_impl->instanceBuffer = std::make_unique<Buffer>(m_impl->device, instanceBufferInfo);
+	m_impl->instanceBuffer = std::make_unique<Buffer>(&_device, instanceBufferInfo);
 
 	std::vector<vk::AccelerationStructureInstanceKHR> vkInstances;
 	vkInstances.reserve(m_impl->instances.size());
@@ -201,7 +203,7 @@ void AccelerationStructure::CreateTopLevel(const AccelerationStructureCreateInfo
 
 	uint32_t instanceCount = static_cast<uint32_t>(m_impl->instances.size());
 
-	m_impl->buildSizes = m_impl->device->GetImpl().device.getAccelerationStructureBuildSizesKHR(
+	m_impl->buildSizes = _device.GetImpl().device.getAccelerationStructureBuildSizesKHR(
 		vk::AccelerationStructureBuildTypeKHR::eDevice,
 		buildInfo,
 		{ instanceCount }
@@ -210,15 +212,15 @@ void AccelerationStructure::CreateTopLevel(const AccelerationStructureCreateInfo
 	if (m_impl->buildSizes.accelerationStructureSize == 0)
 		throw std::runtime_error("getAccelerationStructureBuildSizesKHR returned zero accelerationStructureSize (TLAS)");
 
-	CreateAccelerationStructureBuffer(m_impl->buildSizes.accelerationStructureSize);
-	CreateScratchBuffer(m_impl->buildSizes.buildScratchSize);
+	CreateAccelerationStructureBuffer(_device, m_impl->buildSizes.accelerationStructureSize);
+	CreateScratchBuffer(_device, m_impl->buildSizes.buildScratchSize);
 
 	vk::AccelerationStructureCreateInfoKHR createInfo{};
 	createInfo.buffer = *m_impl->buffer->GetImpl().buffer;
 	createInfo.size = m_impl->buildSizes.accelerationStructureSize;
 	createInfo.type = vk::AccelerationStructureTypeKHR::eTopLevel;
 
-	m_impl->accelerationStructure.emplace(m_impl->device->GetImpl().device, createInfo);
+	m_impl->accelerationStructure.emplace(_device.GetImpl().device, createInfo);
 }
 
 void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
@@ -313,7 +315,7 @@ void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
 			buildRangePtrs.push_back(&range);
 		}
 
-		commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
+		_cmdBuf->GetImpl().commandBuffer.buildAccelerationStructuresKHR({buildInfo}, buildRangePtrs);
 	}
 	else
 	{
@@ -367,6 +369,11 @@ void AccelerationStructure::Build(const CommandBuffer* _cmdBuf)
 
 		std::vector<vk::AccelerationStructureBuildRangeInfoKHR*> buildRangePtrs = { &rangeInfo };
 
-		commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
+		_cmdBuf->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
 	}
+}
+
+AccelerationStructure::Impl& core::gpu::AccelerationStructure::GetImpl() const
+{
+	return *m_impl;
 }
