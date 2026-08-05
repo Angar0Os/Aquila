@@ -9,8 +9,6 @@ using namespace core::gpu;
 AccelerationStructure::AccelerationStructure(const Device& _device, const AccelerationStructureCreateInfo& _info)
 	: m_impl(new Impl)
 {
-	m_impl->device = _device;
-
 	if (_info.preferFastTrace)
 		m_impl->buildFlags |= vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 	if (_info.allowUpdate)

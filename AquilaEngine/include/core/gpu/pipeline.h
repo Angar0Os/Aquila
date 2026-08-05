@@ -47,8 +47,9 @@ namespace core::gpu
 		std::vector<ShaderStage> shaderStages;
 		std::vector<SVertexInputBinding> vertexBindings;
 		std::vector<SVertexInputAttribute> vertexAttributes;
-
-		utils::EPrimitiveTopology topology;
+		
+		utils::EPipelineType		pipelineType;
+		utils::EPrimitiveTopology	topology;
 
 		utils::EPolygonMode polygonMode;
 		utils::ECullMode cullMode;

@@ -69,6 +69,12 @@
     <ClCompile Include="src\core\gpu\vulkan\descriptorSet_impl.cpp">
       <Filter>Source Files\core\gpu\vulkan</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\gpu\vulkan\accelerationStructure_impl.cpp">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\gpu\vulkan\texture_impl.cpp">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\core\window.h">
@@ -132,6 +138,18 @@
       <Filter>Source Files\core\gpu\vulkan</Filter>
     </ClInclude>
     <ClInclude Include="include\core\gpu\descriptorSet.h">
+      <Filter>Header Files\core\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\gpu\vulkan\accelerationStructure_impl.h">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\gpu\vulkan\texture_impl.h">
+      <Filter>Source Files\core\gpu\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\gpu\accelerationStructure.h">
+      <Filter>Header Files\core\gpu</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\gpu\texture.h">
       <Filter>Header Files\core\gpu</Filter>
     </ClInclude>
   </ItemGroup>

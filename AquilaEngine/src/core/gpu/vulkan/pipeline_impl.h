@@ -11,6 +11,7 @@ namespace core::gpu
 	{
 		vk::raii::PipelineLayout pipelineLayout;
 		vk::raii::Pipeline pipeline;
+		utils::EPipelineType	type;
 
 		explicit Impl(const core::gpu::Device* device, const PipelineCreateInfo& info);
 		~Impl();

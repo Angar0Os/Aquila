@@ -11,6 +11,7 @@ Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
 {
 	std::vector<vk::raii::ShaderModule> shaderModules;
 	std::vector<vk::PipelineShaderStageCreateInfo> shaderStageInfos;
+	type = info.pipelineType;
 
 	for (const auto& stage : info.shaderStages)
 	{

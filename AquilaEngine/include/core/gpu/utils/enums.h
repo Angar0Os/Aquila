@@ -161,6 +161,18 @@ namespace core::gpu::utils
 		Linear
 	};
 
+	enum class EImageLayout
+	{
+		Undefined,
+		General,
+		ShaderReadOnly,
+		ColorAttachment,
+		DepthStencilAttachment,
+		TransferSrc,
+		TransferDst,
+		Present
+	};
+
 	enum class EImageUsage : uint32_t
 	{
 		None = 0,
@@ -296,6 +308,12 @@ namespace core::gpu::utils
 	{
 		BottomLevel,
 		TopLevel
+	};
+
+	enum class EPipelineType
+	{
+		Compute, 
+		Graphics
 	};
 }
 
