@@ -546,7 +546,7 @@ void CommandBuffer::PushConstants(const Pipeline& _pipeline, uint32_t _stageFlag
 	);
 }
 
-void CommandBuffer::BuildAccelerationStructure(const AccelerationStructure& _accelerationStucture)
+void CommandBuffer::BuildAccelerationStructure(const AccelerationStructure& _accelerationStructure)
 {
 }
 

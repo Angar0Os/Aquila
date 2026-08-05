@@ -10,6 +10,7 @@
 
 namespace core::gpu
 {
+	class AccelerationStructure;
 	class Buffer;
 	class DescriptorSet;
 	class Device;
@@ -71,7 +72,7 @@ namespace core::gpu
 
 		void PushConstants(const Pipeline& _pipeline, uint32_t _stageFlags, uint32_t _offset, uint32_t _size, const void* _pValues);
 
-		void BuildAccelerationStructure(const AccelerationStructure& _accelerationStucture);
+		void BuildAccelerationStructure(const AccelerationStructure& _accelerationStructure);
 		void AccelerationStructureBarrier();
 
 		void TraceRays();

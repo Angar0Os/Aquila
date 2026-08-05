@@ -3,7 +3,7 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-#pragma comment(lib, "glfw3.lib")
+#pragma comment(lib, "glfw3-s.lib")
 
 using namespace core;
 
