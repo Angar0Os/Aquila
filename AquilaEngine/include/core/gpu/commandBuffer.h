@@ -66,7 +66,7 @@ namespace core::gpu
 
 		void TransitionImageLayout(const Image& _image, utils::EImageLayout _oldLayout, utils::EImageLayout _newLayout, bool _isDepth = false);
 		void BlitImage(const Image& _srcImage, const Image& _dstImage);
-
+		
 		void CopyBuffer(const Buffer& _srcBuffer, const Buffer& _dstBuffer, uint32_t _size);
 		void CopyBufferToImage(const Buffer& _srcBuffer, const Image& _dstImage, uint32_t _width, uint32_t _height);
 
