@@ -35,3 +35,31 @@ void RenderGraph::AddPass(const std::string& name, std::function<void(PassBuilde
 	m_passes.push_back(std::move(pass));
 }
 
+void RenderGraph::BuildDependencies()
+{
+	for (auto& producer : m_passes)
+	{
+		for (auto& output : producer.outputs)
+		{
+			for (auto& consumer : m_passes)
+			{
+				if(&producer == &consumer)
+					continue;
+
+				for (auto* input : consumer.inputs)
+				{
+					AddDependency(producer, consumer, *output);
+				}
+			}
+		}
+	}
+}
+
+void RenderGraph::AddDependency(Pass& _producer, Pass& _consumer, PassAttachment& _attachment)
+{
+	m_dependencies.push_back({
+		&_producer,
+		&_consumer,
+		&_attachment
+	});
+}

@@ -8,6 +8,13 @@
 
 namespace graphics::deferred
 {
+	struct Dependency
+	{
+		Pass* producer;
+		Pass* consumer;
+		PassAttachment* attachment;
+	};
+
 	class RenderGraph
 	{
 	public:
@@ -24,8 +31,11 @@ namespace graphics::deferred
 		void Optimize();
 		void BuildGraph();
 
+		void AddDependency(Pass& producer, Pass& consumer, PassAttachment& attachment);
+
 		std::vector<Pass> m_passes;
 		std::vector<Pass> m_passesOrdered;
+		std::vector<Dependency> m_dependencies;
 	};
 }
 
