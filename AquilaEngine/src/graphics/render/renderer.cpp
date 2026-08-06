@@ -8,6 +8,8 @@ using namespace graphics::render;
 
 Renderer::Renderer()
 {
+    deferred::RenderGraph renderGraph; // TODO : Need to move this into a private renderGraph var so it's unique.
+    renderGraph.Compile();
 }
 
 Renderer::~Renderer() = default;

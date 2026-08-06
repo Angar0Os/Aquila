@@ -96,7 +96,13 @@
     <ClCompile Include="src\graphics\render\renderer.cpp">
       <Filter>Source Files\graphics\render</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphics\deferred\renderGraph.cpp">
+      <Filter>Source Files\graphics\deferred</Filter>
+    </ClCompile>
     <ClCompile Include="src\graphics\deferred\pass.cpp">
+      <Filter>Source Files\graphics\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\deferred\passBuilder.cpp">
       <Filter>Source Files\graphics\deferred</Filter>
     </ClCompile>
   </ItemGroup>
@@ -183,6 +189,9 @@
       <Filter>Header Files\graphics\render</Filter>
     </ClInclude>
     <ClInclude Include="include\graphics\deferred\renderGraph.h">
+      <Filter>Header Files\graphics\deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\deferred\passBuilder.h">
       <Filter>Header Files\graphics\deferred</Filter>
     </ClInclude>
   </ItemGroup>

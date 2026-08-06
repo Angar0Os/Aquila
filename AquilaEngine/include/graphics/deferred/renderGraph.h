@@ -4,7 +4,7 @@
 
 #include <vector>
 #include <functional>
-#include <graphics/deferred/pass.h>
+#include <graphics/deferred/passBuilder.h>
 
 namespace graphics::deferred
 {
@@ -14,6 +14,8 @@ namespace graphics::deferred
 		void Compile();
 		void Execute(core::gpu::CommandBuffer& cmd);
 		void AddPass(const std::string& name, std::function<void(PassBuilder&)> setup, std::function<void(core::gpu::CommandBuffer&)> execute);
+
+		std::vector<std::unique_ptr<PassAttachment>> attachments;
 	private:
 		void BuildDependencies();
 		void TopologicalSort();
@@ -24,7 +26,6 @@ namespace graphics::deferred
 
 		std::vector<Pass> m_passes;
 		std::vector<Pass> m_passesOrdered;
-		std::vector<std::unique_ptr<PassAttachment>> m_attachments;
 	};
 }
 

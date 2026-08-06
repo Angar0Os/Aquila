@@ -26,7 +26,7 @@ void RenderGraph::Execute(core::gpu::CommandBuffer& _cmdBuf)
 void RenderGraph::AddPass(const std::string& name, std::function<void(PassBuilder&)> setup, std::function<void(core::gpu::CommandBuffer&)> execute)
 {
 	Pass pass;
-	PassBuilder builder(pass, m_attachments);
+	PassBuilder builder(pass, attachments);
 
 	setup(builder);
 

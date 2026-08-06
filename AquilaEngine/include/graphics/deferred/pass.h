@@ -18,7 +18,9 @@ namespace core::gpu
 
 namespace graphics::deferred
 {
-    enum class AttachmentType
+    class RenderGraph;
+
+    enum class EAttachmentType
     {
         Color,
         Depth
@@ -28,7 +30,7 @@ namespace graphics::deferred
     {
         std::string name;
 
-        AttachmentType type;
+        EAttachmentType type;
 
         core::gpu::utils::ETextureFormat format;
         core::gpu::utils::EImageUsage usage;
@@ -48,29 +50,6 @@ namespace graphics::deferred
         std::vector<PassAttachment*> outputs;
 
         std::function<void(core::gpu::CommandBuffer&)> execute;
-    };
-
-    class PassBuilder
-    {
-    public:
-
-        PassBuilder(Pass& pass, std::vector<std::unique_ptr<PassAttachment>>& attachments);
-
-        PassAttachment& CreateColorAttachment(
-            const std::string& name,
-            core::gpu::utils::ETextureFormat format);
-
-        PassAttachment& CreateDepthAttachment(
-            const std::string& name,
-            core::gpu::utils::ETextureFormat format);
-
-        void Read(PassAttachment& attachment);
-
-        void Write(PassAttachment& attachment);
-
-    private:
-
-        Pass& m_pass;
     };
 }
 
