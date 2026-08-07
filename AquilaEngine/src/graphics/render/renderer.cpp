@@ -16,11 +16,12 @@ Renderer::~Renderer() = default;
 
 void Renderer::Render(core::gpu::CommandBuffer& _cmdBuf)
 {
-	deferred::RenderGraph renderGraph; // TODO : Remove this as soon as i want to compile code.
+	deferred::RenderGraph renderGraph;
 
 	BuildGBufferPass(renderGraph);
 	BuildLightingPass(renderGraph);
 
+	renderGraph.Compile();
 	renderGraph.Execute(_cmdBuf);
 }
 
