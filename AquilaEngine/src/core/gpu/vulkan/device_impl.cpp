@@ -653,6 +653,11 @@ void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer)
 	commandBuffer = nullptr;
 }
 
+std::pair<uint32_t, uint32_t> Device::GetSwapchainExtent()
+{
+	return { m_impl->swapchainExtent.width, m_impl->swapchainExtent.height };
+}
+
 void Device::Present()
 {
 	if (currentFrame >= m_impl->frameSyncObjects.size()) return;

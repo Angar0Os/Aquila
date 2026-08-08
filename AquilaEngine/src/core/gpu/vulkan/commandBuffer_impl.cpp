@@ -113,7 +113,7 @@ void CommandBuffer::Bind<Buffer>(Buffer& _buffer)
 }
 
 template<>
-void CommandBuffer::Bind<Pipeline>(const DescriptorSet& _dsSet, Pipeline& _pipeline, uint32_t _firstSet)
+void CommandBuffer::Bind<Pipeline>(const DescriptorSet& _dsSet, Pipeline& _pipeline, uint32_t _firstSet) const
 {
 	m_impl->commandBuffer.bindDescriptorSets(
 		m_impl->lastBoundPipeline,

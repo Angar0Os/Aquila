@@ -13,14 +13,14 @@ namespace core::gpu
 	class Device;
 	class DescriptorSetLayout;
 
-	struct SVertexInputBinding
+	struct VertexInputBinding
 	{
 		uint32_t binding;
 		uint32_t stride;
 		utils::EVertexInputRate inputRate;
 	};
 
-	struct SVertexInputAttribute
+	struct VertexInputAttribute
 	{
 		uint32_t location;
 		uint32_t binding;
@@ -45,8 +45,8 @@ namespace core::gpu
 	struct PipelineCreateInfo
 	{
 		std::vector<ShaderStage> shaderStages;
-		std::vector<SVertexInputBinding> vertexBindings;
-		std::vector<SVertexInputAttribute> vertexAttributes;
+		std::vector<VertexInputBinding> vertexBindings;
+		std::vector<VertexInputAttribute> vertexAttributes;
 		
 		utils::EPipelineType		pipelineType;
 		utils::EPrimitiveTopology	topology;

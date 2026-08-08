@@ -54,7 +54,7 @@ namespace core::gpu
 		void Bind(T& _input);
 
 		template<typename T>
-		void Bind(const DescriptorSet& _dsSet, T& _input, uint32_t _firstSet);
+		void Bind(const DescriptorSet& _dsSet, T& _input, uint32_t _firstSet) const;
 
 		void SetViewport(float _x, float _y, float _width, float _height, float _minDepth, float _maxDepth);
 		void SetScissor(int32_t _x, int32_t _y, uint32_t _width, uint32_t _height);

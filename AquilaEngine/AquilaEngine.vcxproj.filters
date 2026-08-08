@@ -37,20 +37,17 @@
     <Filter Include="Header Files\graphics">
       <UniqueIdentifier>{6e3997b0-4852-4605-b625-90b9d667ded4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\graphics\deferred">
-      <UniqueIdentifier>{67ebf5a7-3917-4ac5-96a8-1bcc6079a44d}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\graphics\render">
       <UniqueIdentifier>{4ef2ff48-a426-4390-ba9c-77d23f1270f7}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files\graphics">
       <UniqueIdentifier>{0cf5bdd3-6217-43ea-b773-b83ae49a414b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\graphics\deferred">
-      <UniqueIdentifier>{22538ee1-1199-419e-95c7-525740330618}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\graphics\render">
       <UniqueIdentifier>{154a7c7a-b59a-4f7c-b5b2-ed726827d8f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\loaders">
+      <UniqueIdentifier>{e192d5b7-d9b0-4bbc-8f63-45ee7db0baf0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -95,15 +92,6 @@
     </ClCompile>
     <ClCompile Include="src\graphics\render\renderer.cpp">
       <Filter>Source Files\graphics\render</Filter>
-    </ClCompile>
-    <ClCompile Include="src\graphics\deferred\renderGraph.cpp">
-      <Filter>Source Files\graphics\deferred</Filter>
-    </ClCompile>
-    <ClCompile Include="src\graphics\deferred\pass.cpp">
-      <Filter>Source Files\graphics\deferred</Filter>
-    </ClCompile>
-    <ClCompile Include="src\graphics\deferred\passBuilder.cpp">
-      <Filter>Source Files\graphics\deferred</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -182,17 +170,11 @@
     <ClInclude Include="include\core\gpu\texture.h">
       <Filter>Header Files\core\gpu</Filter>
     </ClInclude>
-    <ClInclude Include="include\graphics\deferred\pass.h">
-      <Filter>Header Files\graphics\deferred</Filter>
-    </ClInclude>
     <ClInclude Include="include\graphics\render\renderer.h">
       <Filter>Header Files\graphics\render</Filter>
     </ClInclude>
-    <ClInclude Include="include\graphics\deferred\renderGraph.h">
-      <Filter>Header Files\graphics\deferred</Filter>
-    </ClInclude>
-    <ClInclude Include="include\graphics\deferred\passBuilder.h">
-      <Filter>Header Files\graphics\deferred</Filter>
+    <ClInclude Include="include\loaders\shaderLoader.h">
+      <Filter>Header Files\loaders</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

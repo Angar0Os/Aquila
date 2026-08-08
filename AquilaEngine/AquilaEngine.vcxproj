@@ -204,9 +204,6 @@
     <ClCompile Include="src\core\gpu\vulkan\pipeline_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\texture_impl.cpp" />
     <ClCompile Include="src\core\window.cpp" />
-    <ClCompile Include="src\graphics\deferred\pass.cpp" />
-    <ClCompile Include="src\graphics\deferred\passBuilder.cpp" />
-    <ClCompile Include="src\graphics\deferred\renderGraph.cpp" />
     <ClCompile Include="src\graphics\render\renderer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -224,10 +221,8 @@
     <ClInclude Include="include\core\gpu\utils\converters.h" />
     <ClInclude Include="include\core\gpu\utils\enums.h" />
     <ClInclude Include="include\core\window.h" />
-    <ClInclude Include="include\graphics\deferred\pass.h" />
-    <ClInclude Include="include\graphics\deferred\passBuilder.h" />
-    <ClInclude Include="include\graphics\deferred\renderGraph.h" />
     <ClInclude Include="include\graphics\render\renderer.h" />
+    <ClInclude Include="include\loaders\shaderLoader.h" />
     <ClInclude Include="src\core\gpu\vulkan\accelerationStructure_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\commandBuffer_impl.h" />
