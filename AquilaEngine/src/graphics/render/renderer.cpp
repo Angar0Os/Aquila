@@ -97,12 +97,10 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 
 void Renderer::CreateUniformBuffers()
 {
-	gBufferUniformBuffers.clear();
-	gBufferUniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
+	uniformBuffers.clear();
+	uniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
 
-	lightingUniformBuffers.clear();
-	lightingUniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
-
+	
 	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
 	{
 		core::gpu::BufferCreateInfo bufferInfo{
@@ -110,17 +108,7 @@ void Renderer::CreateUniformBuffers()
 			.usage				= core::gpu::utils::EBufferUsage::UniformBuffer,
 			.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 		};
-		gBufferUniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
-	}
-
-	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
-	{
-		core::gpu::BufferCreateInfo bufferInfo{
-			.size				= sizeof(UniformBufferObject),
-			.usage				= core::gpu::utils::EBufferUsage::UniformBuffer,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
-		};	
-		lightingUniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
+		uniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
 	}
 }
 
@@ -283,7 +271,7 @@ void Renderer::CreateDescriptorSets()
 	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
 	{
 		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *gBufferDsLayouts[0]);
-		ds->Bind(0, *gBufferUniformBuffers[i]);
+		ds->Bind(0, *uniformBuffers[i]);
 		ds->Update(m_device);
 		gBufferDescriptorSets.push_back(std::move(ds));
 	}
@@ -291,7 +279,7 @@ void Renderer::CreateDescriptorSets()
 	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
 	{
 		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *lightingDsLayouts[0]);
-		ds->Bind(0, *lightingUniformBuffers[i]);
+		ds->Bind(0, *uniformBuffers[i]);
 		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
 	}

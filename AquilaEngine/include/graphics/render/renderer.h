@@ -82,8 +82,7 @@ namespace graphics::render
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			gBufferDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			lightingDescriptorSets;
 
-		std::vector<std::unique_ptr<core::gpu::Buffer>>					gBufferUniformBuffers;
-		std::vector<std::unique_ptr<core::gpu::Buffer>>					lightingUniformBuffers;
+		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
 
 		std::vector<PassAttachment>										gBufferColorAttachments;
 		PassAttachment													gBufferDepthAttachment;
