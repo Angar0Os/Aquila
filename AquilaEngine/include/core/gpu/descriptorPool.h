@@ -16,7 +16,7 @@ namespace core::gpu
         std::unique_ptr<Impl> m_impl;
 
     public:
-        DescriptorPool(const Device* _device);
+        DescriptorPool(const Device& _device);
         ~DescriptorPool();
 
         Impl& GetImpl() const;

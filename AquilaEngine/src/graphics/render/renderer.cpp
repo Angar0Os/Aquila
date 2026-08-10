@@ -1,6 +1,7 @@
 #include <graphics/render/renderer.h>
 
 #include <core/gpu/accelerationStructure.h>
+#include <core/gpu/buffer.h>
 #include <core/gpu/commandBuffer.h>
 #include <core/gpu/device.h>
 #include <core/gpu/descriptorSet.h>
@@ -16,7 +17,7 @@
 
 using namespace graphics::render;
 
-std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline(const core::gpu::Device& _device)
+std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 {
 	auto shaderCode = loaders::ReadFile("assets/shaders/gBuffer.spv");
 
@@ -62,12 +63,12 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline(const core::
 	pipelineInfo.pushConstantRanges = pushConstants;
 	pipelineInfo.dynamicStates = { core::gpu::utils::EDynamicState::Viewport, core::gpu::utils::EDynamicState::Scissor };
 
-	return std::make_unique<core::gpu::Pipeline>(&_device, pipelineInfo);
+	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
 }
 
-std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline(const core::gpu::Device& _device)
+std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 {
-	auto shaderCode = loaders::ReadFile("bin/assets/shaders/lighting.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/lighting.spv");
 
 	core::gpu::PipelineCreateInfo pipelineInfo{};
 	pipelineInfo.shaderStages = {
@@ -91,12 +92,41 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline(const core:
 	pipelineInfo.pushConstantRanges = {};
 	pipelineInfo.dynamicStates = { core::gpu::utils::EDynamicState::Viewport, core::gpu::utils::EDynamicState::Scissor };
 
-	return std::make_unique<core::gpu::Pipeline>(&_device, pipelineInfo);
+	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
 }
 
-void Renderer::CreateAttachments(core::gpu::Device& _device)
+void Renderer::CreateUniformBuffers()
 {
-	auto [width, height] = _device.GetSwapchainExtent();
+	gBufferUniformBuffers.clear();
+	gBufferUniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
+
+	lightingUniformBuffers.clear();
+	lightingUniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
+	{
+		core::gpu::BufferCreateInfo bufferInfo{
+			.size				= sizeof(UniformBufferObject),
+			.usage				= core::gpu::utils::EBufferUsage::UniformBuffer,
+			.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+		};
+		gBufferUniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
+	}
+
+	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
+	{
+		core::gpu::BufferCreateInfo bufferInfo{
+			.size				= sizeof(UniformBufferObject),
+			.usage				= core::gpu::utils::EBufferUsage::UniformBuffer,
+			.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+		};	
+		lightingUniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
+	}
+}
+
+void Renderer::CreateAttachments()
+{
+	auto [width, height] = m_device.GetSwapchainExtent();
 
 	const core::gpu::utils::ETextureFormat colorFormats[] = {
 		core::gpu::utils::ETextureFormat::RGBA8_SRGB,
@@ -111,124 +141,124 @@ void Renderer::CreateAttachments(core::gpu::Device& _device)
 	{
 		core::gpu::ImageCreateInfo info
 		{
-			.width				= width,
-			.height				= height,
-			.mipLevels			= 1,
-			.format				= colorFormats[i],
-			.tiling				= core::gpu::utils::EImageTiling::Optimal,
-			.usage				= core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples			= core::gpu::utils::ESampleCount::e1
+			.width = width,
+			.height = height,
+			.mipLevels = 1,
+			.format = colorFormats[i],
+			.tiling = core::gpu::utils::EImageTiling::Optimal,
+			.usage = core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
+			.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+			.samples = core::gpu::utils::ESampleCount::e1
 		};
 
-		gBufferColorAttachments[i].image	= std::make_unique<core::gpu::Image>(&_device, info);
-		gBufferColorAttachments[i].texture	= std::make_unique<core::gpu::Texture>(_device, *gBufferColorAttachments[i].image);
+		gBufferColorAttachments[i].image = std::make_unique<core::gpu::Image>(m_device, info);
+		gBufferColorAttachments[i].texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferColorAttachments[i].image);
 
 		core::gpu::ImageCreateInfo depthInfo
 		{
-			.width				= width,
-			.height				= height,
-			.mipLevels			= 1,
-			.format				= core::gpu::utils::ETextureFormat::Depth32F,
-			.tiling				= core::gpu::utils::EImageTiling::Optimal,
-			.usage				= core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples			= core::gpu::utils::ESampleCount::e1
+			.width = width,
+			.height = height,
+			.mipLevels = 1,
+			.format = core::gpu::utils::ETextureFormat::Depth32F,
+			.tiling = core::gpu::utils::EImageTiling::Optimal,
+			.usage = core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
+			.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+			.samples = core::gpu::utils::ESampleCount::e1
 		};
 
-		gBufferDepthAttachment.image	= std::make_unique<core::gpu::Image>(&_device, depthInfo);
-		gBufferDepthAttachment.texture	= std::make_unique<core::gpu::Texture>(_device, *gBufferDepthAttachment.image);
+		gBufferDepthAttachment.image = std::make_unique<core::gpu::Image>(m_device, depthInfo);
+		gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
 	}
 }
 
-void Renderer::CreateDescriptorSetLayout(core::gpu::Device& _device)
+void Renderer::CreateDescriptorSetLayout()
 {
-	core::gpu::DescriptorSetLayoutBinding uboBinding
+	core::gpu::DescriptorSetLayoutBinding gBufferUboBinding
 	{
-		.binding		= 0,
+		.binding = 0,
 		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
-		.stageFlags		= core::gpu::utils::EShaderStage::Vertex | core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Vertex | core::gpu::utils::EShaderStage::Fragment
 	};
 
 	gBufferDsLayouts.clear();
 	gBufferDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(
-		&_device,
-		core::gpu::DescriptorSetLayoutCreateInfo{ .bindings = { uboBinding } }
+		m_device,
+		core::gpu::DescriptorSetLayoutCreateInfo{ .bindings = { gBufferUboBinding } }
 	));
 
-	core::gpu::DescriptorSetLayoutBinding uboBinding{
-		.binding		= 0,
+	core::gpu::DescriptorSetLayoutBinding lightingUboBinding{
+		.binding = 0,
 		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding albedoBinding {
-		.binding		= 1,
+	core::gpu::DescriptorSetLayoutBinding albedoBinding{
+		.binding = 1,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding normalBinding {
-		.binding		= 2,
+	core::gpu::DescriptorSetLayoutBinding normalBinding{
+		.binding = 2,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding depthBinding {
-		.binding		= 3,
+	core::gpu::DescriptorSetLayoutBinding depthBinding{
+		.binding = 3,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding tlasBinding {
-		.binding		= 4,
+	core::gpu::DescriptorSetLayoutBinding tlasBinding{
+		.binding = 4,
 		.descriptorType = core::gpu::utils::EDescriptorType::AccelerationStructure,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding envMapBinding {
-		.binding		= 5,
+	core::gpu::DescriptorSetLayoutBinding envMapBinding{
+		.binding = 5,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
-	core::gpu::DescriptorSetLayoutBinding iblBinding {
-		.binding		= 6,
+	core::gpu::DescriptorSetLayoutBinding iblBinding{
+		.binding = 6,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutCreateInfo layoutInfo {
-		.bindings = { uboBinding, albedoBinding, normalBinding,
+	core::gpu::DescriptorSetLayoutCreateInfo layoutInfo{
+		.bindings = { lightingUboBinding, albedoBinding, normalBinding,
 					  depthBinding, tlasBinding, envMapBinding, iblBinding }
 	};
 
 	lightingDsLayouts.clear();
-	lightingDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(&_device, layoutInfo));
+	lightingDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(m_device, layoutInfo));
 }
 
-void Renderer::CreateMaterialLayout(core::gpu::Device& _device)
+void Renderer::CreateMaterialLayout()
 {
-	core::gpu::DescriptorSetLayoutBinding materialUBOBinding {
-		.binding			= 0,
-		.descriptorType		= core::gpu::utils::EDescriptorType::UniformBuffer,
-		.stageFlags			= core::gpu::utils::EShaderStage::Fragment
+	core::gpu::DescriptorSetLayoutBinding materialUBOBinding{
+		.binding = 0,
+		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding albedoBinding {
-		.binding		= 1,
+	core::gpu::DescriptorSetLayoutBinding albedoBinding{
+		.binding = 1,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding normalBinding {
-		.binding		= 2,
+	core::gpu::DescriptorSetLayoutBinding normalBinding{
+		.binding = 2,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
 	core::gpu::DescriptorSetLayoutBinding roughMetalBinding{
-		.binding		= 3,
-		.descriptorType	= core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags		= core::gpu::utils::EShaderStage::Fragment
+		.binding = 3,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
 	materialLayout = std::make_unique<core::gpu::DescriptorSetLayout>(
-		&_device,
+		m_device,
 		core::gpu::DescriptorSetLayoutCreateInfo{
 			.bindings = {
 				materialUBOBinding,
@@ -240,52 +270,57 @@ void Renderer::CreateMaterialLayout(core::gpu::Device& _device)
 	);
 }
 
-void Renderer::CreateDescriptorSets(const core::gpu::Device& _device, const core::gpu::CommandBuffer& _cmdBuf)
+void Renderer::CreateDescriptorSets()
 {
+	auto cmdBuf = m_device.AcquireCommandBuffer();
+
 	gBufferDescriptorSets.clear();
 	lightingDescriptorSets.clear();
 
-	gBufferDescriptorSets.reserve(_device.FRAMES_IN_FLIGHT);
-	lightingDescriptorSets.reserve(_device.FRAMES_IN_FLIGHT);
-	
-	for (uint32_t i = 0; i < _device.FRAMES_IN_FLIGHT; ++i)
-	{
-		auto ds = std::make_unique<core::gpu::DescriptorSet>(&_device, gBufferDescriptorSets[0].get());
-		ds->Bind(0, *gBufferUniformBuffers[i]);
-		ds->Update(_device);
-		gBufferDescriptorSets.push_back(std::move(ds));
-	} 
+	gBufferDescriptorSets.reserve(m_device.FRAMES_IN_FLIGHT);
+	lightingDescriptorSets.reserve(m_device.FRAMES_IN_FLIGHT);
 
-	for (uint32_t i = 0; i < _device.FRAMES_IN_FLIGHT; ++i)
+	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
 	{
-		auto ds = std::make_unique<core::gpu::DescriptorSet>(&_device, lightingDsLayouts[0].get());
+		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *gBufferDsLayouts[0]);
+		ds->Bind(0, *gBufferUniformBuffers[i]);
+		ds->Update(m_device);
+		gBufferDescriptorSets.push_back(std::move(ds));
+	}
+
+	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
+	{
+		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *lightingDsLayouts[0]);
 		ds->Bind(0, *lightingUniformBuffers[i]);
-		ds->Update(_device);
+		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
 	}
-	
-	_cmdBuf.Bind(*gBufferDescriptorSets[_device.currentFrame], *m_gBufferPipeline, 0u);
-	_cmdBuf.Bind(*lightingDescriptorSets[_device.currentFrame], *m_lightingPipeline, 0u);
+
+	cmdBuf->Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
+	cmdBuf->Bind(*lightingDescriptorSets[m_device.currentFrame], *m_lightingPipeline, 0u);
 }
 
-void Renderer::UpdateDescriptorSets(const core::gpu::Device& _device)
+void Renderer::UpdateDescriptorSets()
 {
 	if (!tlas) return;
 
-	lightingDescriptorSets[_device.currentFrame]->Bind(4, *tlas);
-	lightingDescriptorSets[_device.currentFrame]->Update(_device);
+	lightingDescriptorSets[m_device.currentFrame]->Bind(4, *tlas);
+	lightingDescriptorSets[m_device.currentFrame]->Update(m_device);
 }
 
-Renderer::Renderer(core::gpu::Device _device, core::gpu::CommandBuffer _cmdBuf)
+Renderer::Renderer(const core::gpu::Device& _device)
+	: m_device(_device)
 {
-	CreateAttachments(_device);
-	CreateDescriptorSetLayout(_device);
-	CreateMaterialLayout(_device);
+	CreateUniformBuffers();
 
-	m_gBufferPipeline = BuildGBufferPipeline(_device);
-	m_lightingPipeline = BuildLightingPipeline(_device);
+	CreateAttachments();
+	CreateDescriptorSetLayout();
+	CreateMaterialLayout();
 
-	CreateDescriptorSets(_device, _cmdBuf);
+	m_gBufferPipeline = BuildGBufferPipeline();
+	m_lightingPipeline = BuildLightingPipeline();
+
+	CreateDescriptorSets();
 	//CreateFallbackMaterial()
 }
 
@@ -293,5 +328,5 @@ Renderer::~Renderer() = default;
 
 void Renderer::Render(core::gpu::CommandBuffer& _cmdBuf)
 {
-	
+
 }

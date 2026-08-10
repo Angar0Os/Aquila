@@ -30,8 +30,8 @@ namespace core::gpu
 
 		uint32_t FindMemoryType(const Device& _device, uint32_t _typeFilter, vk::MemoryPropertyFlags _properties);
 
-		explicit Impl(const Device* _device, const ImageCreateInfo& _info);
-		explicit Impl(const Device* _device, const PredefinedImageCreateInfo& _info);
+		explicit Impl(const Device& _device, const ImageCreateInfo& _info);
+		explicit Impl(const Device& _device, const PredefinedImageCreateInfo& _info);
 
 		~Impl() noexcept;
 	};

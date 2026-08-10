@@ -34,7 +34,7 @@ namespace core::gpu
 			vk::raii::Semaphore renderFinished;
 		};
 
-		explicit Impl(const Window& _wnd, const Device* _device);
+		explicit Impl(const Window& _wnd, const Device& _device);
 		~Impl() noexcept;
 
 		void CreateInstance();
@@ -52,7 +52,7 @@ namespace core::gpu
 		vk::PresentModeKHR		ChoosePresentMode(const std::vector<vk::PresentModeKHR>& _availableModes, utils::EPresentMode _preferredMode);
 		vk::Extent2D			ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capabilities, uint32_t _width, uint32_t _height);
 
-		const Device* parent = nullptr;
+		const Device&						parent;
 
 		vk::raii::Context					context;
 		vk::raii::Instance					instance = nullptr;

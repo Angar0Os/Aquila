@@ -22,9 +22,9 @@ namespace core::gpu
 
 		Image* AcquireNextImage();	
 
-		CommandBuffer* AcquireCommandBuffer();
+		CommandBuffer* AcquireCommandBuffer() const;
 		void ReleaseCommandBuffer(CommandBuffer*& commandBuffer);
-		std::pair<uint32_t, uint32_t> GetSwapchainExtent();
+		std::pair<uint32_t, uint32_t> GetSwapchainExtent() const;
 		void Present();
 
 		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;

@@ -9,14 +9,8 @@ namespace core::gpu
 {
 	struct CommandPool::Impl
 	{
-		const Device*			device;
-		vk::raii::CommandPool	pool;
-		uint32_t				queueFamilyIndex;
-
-		explicit Impl(const core::gpu::Device* _device, const CommandPoolCreateInfo& _info);
-		~Impl();
-
-		void Reset(bool _releaseResources);
+		vk::raii::CommandPool	pool				= nullptr;
+		uint32_t				queueFamilyIndex	= ~0;
 	};
 }
 

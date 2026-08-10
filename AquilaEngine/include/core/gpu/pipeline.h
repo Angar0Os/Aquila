@@ -78,7 +78,7 @@ namespace core::gpu
 		struct Impl;
 		std::unique_ptr<Impl> m_impl;
 	public:
-		Pipeline(const core::gpu::Device* device, const PipelineCreateInfo& info);
+		Pipeline(const core::gpu::Device& device, const PipelineCreateInfo& info);
 		~Pipeline();
 
 		Impl& GetImpl() const;

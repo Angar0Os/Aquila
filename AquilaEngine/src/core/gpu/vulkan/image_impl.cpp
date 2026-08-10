@@ -7,7 +7,7 @@
 
 using namespace core::gpu;
 
-Image::Impl::Impl(const Device* _device, const ImageCreateInfo& _info)
+Image::Impl::Impl(const Device& _device, const ImageCreateInfo& _info)
 	: format(_info.format), samples(_info.samples)
 {
 	if (_info.width == 0 || _info.height == 0)
@@ -29,19 +29,19 @@ Image::Impl::Impl(const Device* _device, const ImageCreateInfo& _info)
 	imageInfo.sharingMode = vk::SharingMode::eExclusive;
 	imageInfo.initialLayout = vk::ImageLayout::eUndefined;
 
-	raiiImage = vk::raii::Image(_device->GetImpl().device, imageInfo);
+	raiiImage = vk::raii::Image(_device.GetImpl().device, imageInfo);
 
 	vk::MemoryRequirements memRequirements = raiiImage.getMemoryRequirements();
 
 	vk::MemoryAllocateInfo allocInfo{};
 	allocInfo.allocationSize = memRequirements.size;
 	allocInfo.memoryTypeIndex = FindMemoryType(
-		*_device,
+		_device,
 		memRequirements.memoryTypeBits,
 		utils::ToVulkan(_info.memoryProperties)
 	);
 
-	memory = vk::raii::DeviceMemory(_device->GetImpl().device, allocInfo);
+	memory = vk::raii::DeviceMemory(_device.GetImpl().device, allocInfo);
 
 	raiiImage.bindMemory(*memory, 0);
 	image = *raiiImage;
@@ -59,10 +59,10 @@ Image::Impl::Impl(const Device* _device, const ImageCreateInfo& _info)
 	viewInfo.subresourceRange.baseArrayLayer = 0;
 	viewInfo.subresourceRange.layerCount = 1;
 
-	view = vk::raii::ImageView(_device->GetImpl().device, viewInfo);
+	view = vk::raii::ImageView(_device.GetImpl().device, viewInfo);
 }
 
-Image::Impl::Impl(const Device* _device, const PredefinedImageCreateInfo& _info)
+Image::Impl::Impl(const Device& _device, const PredefinedImageCreateInfo& _info)
 {
 	image = _info.image;
 	extent = _info.extent;
@@ -77,7 +77,7 @@ Image::Impl::Impl(const Device* _device, const PredefinedImageCreateInfo& _info)
 	viewInfo.subresourceRange.baseArrayLayer = 0;
 	viewInfo.subresourceRange.layerCount = 1;
 
-	view = vk::raii::ImageView(_device->GetImpl().device, viewInfo);
+	view = vk::raii::ImageView(_device.GetImpl().device, viewInfo);
 }
 
 Image::Impl::~Impl() = default;
@@ -98,12 +98,12 @@ uint32_t Image::Impl::FindMemoryType(const Device& _device, uint32_t _typeFilter
 	throw std::runtime_error("Failed to find suitable memory type for image");
 }
 
-Image::Image(const Device* _device, const ImageCreateInfo& _info)
+Image::Image(const Device& _device, const ImageCreateInfo& _info)
 {
 	m_impl = std::make_unique<Impl>(_device, _info);
 }
 
-Image::Image(const Device* _device, const PredefinedImageCreateInfo& _info)
+Image::Image(const Device& _device, const PredefinedImageCreateInfo& _info)
 {
 	m_impl = std::make_unique<Impl>(_device, _info);
 }

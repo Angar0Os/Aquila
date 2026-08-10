@@ -104,7 +104,7 @@ vk::Extent2D Device::Impl::ChooseExtent(const vk::SurfaceCapabilitiesKHR& _capab
 
 Device::Device(const Window& _wnd)
 {
-	m_impl = std::make_unique<Impl>(_wnd, this);
+	m_impl = std::make_unique<Impl>(_wnd, *this);
 
 	m_impl->CreateInstance();
 	m_impl->SetupDebugMessenger();
@@ -621,7 +621,7 @@ Image* Device::AcquireNextImage()
 	return m_impl->swapchainImages[m_impl->currentImageIndex].get();
 }
 
-CommandBuffer* Device::AcquireCommandBuffer()
+CommandBuffer* Device::AcquireCommandBuffer() const
 {
 	for (auto& [_, cb] : m_impl->commandBuffers)
 	{
@@ -653,7 +653,7 @@ void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer)
 	commandBuffer = nullptr;
 }
 
-std::pair<uint32_t, uint32_t> Device::GetSwapchainExtent()
+std::pair<uint32_t, uint32_t> Device::GetSwapchainExtent() const
 {
 	return { m_impl->swapchainExtent.width, m_impl->swapchainExtent.height };
 }
@@ -689,7 +689,7 @@ void Device::Present()
 	++currentFrame %= m_impl->frameSyncObjects.size();
 }
 
-Device::Impl::Impl(const Window& _wnd, const Device* _device)
+Device::Impl::Impl(const Window& _wnd, const Device& _device)
 	: window(_wnd), parent(_device)
 {
 }

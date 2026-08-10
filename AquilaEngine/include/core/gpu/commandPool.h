@@ -23,7 +23,7 @@ namespace core::gpu
         std::unique_ptr<Impl> m_impl;
 
     public:
-        CommandPool(const Device* _device, const CommandPoolCreateInfo& _info);
+        CommandPool(const Device& _device, const CommandPoolCreateInfo& _info);
         ~CommandPool();
 
         void Reset(bool _releaseResources = false);

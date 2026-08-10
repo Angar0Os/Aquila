@@ -7,14 +7,9 @@
 
 namespace core::gpu
 {
-	class Device;
-
 	struct DescriptorSetLayout::Impl
 	{
-		vk::raii::DescriptorSetLayout layout;
-
-		explicit Impl(const Device* _device, const DescriptorSetLayoutCreateInfo& _info);
-		~Impl();
+		vk::raii::DescriptorSetLayout layout = nullptr;
 	};
 }
 

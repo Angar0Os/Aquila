@@ -47,8 +47,8 @@ namespace core::gpu
 			std::unique_ptr<Impl> m_impl;
 
 		public:
-			Image(const Device* _device, const ImageCreateInfo& _info);
-			Image(const Device* _device, const PredefinedImageCreateInfo& _info);
+			Image(const Device& _device, const ImageCreateInfo& _info);
+			Image(const Device& _device, const PredefinedImageCreateInfo& _info);
 
 			~Image();
 

@@ -5,22 +5,15 @@
 
 using namespace core::gpu;
 
-CommandPool::Impl::Impl(const Device* _device, const CommandPoolCreateInfo& _info)
-	: device(_device), pool(nullptr), queueFamilyIndex(_info.queueFamilyIndex)
+CommandPool::CommandPool(const Device& _device, const CommandPoolCreateInfo& _info)
+	: m_impl(new Impl)
 {
 	vk::CommandPoolCreateInfo poolInfo{};
 
 	poolInfo.flags = utils::ToVulkan(_info.flags);
 	poolInfo.queueFamilyIndex = _info.queueFamilyIndex;
 
-	pool = vk::raii::CommandPool(device->GetImpl().device, poolInfo);
-}
-
-CommandPool::Impl::~Impl() = default;
-
-CommandPool::CommandPool(const Device* device, const CommandPoolCreateInfo& info)
-{
-	m_impl = std::make_unique<Impl>(device, info);
+	m_impl->pool = vk::raii::CommandPool(_device.GetImpl().device, poolInfo);
 }
 
 CommandPool::~CommandPool() = default;

@@ -3,9 +3,8 @@
 
 using namespace core::gpu;
 
-core::gpu::DescriptorPool::Impl::Impl(DescriptorPool& _pool,
-	const Device* _device)
-	: device(_device), pool(nullptr)
+DescriptorPool::DescriptorPool(const Device& device)
+	: m_impl(new Impl)
 {
 	std::vector<vk::DescriptorPoolSize> poolSizes = {
 		{ vk::DescriptorType::eUniformBuffer,            1024 },
@@ -27,14 +26,7 @@ core::gpu::DescriptorPool::Impl::Impl(DescriptorPool& _pool,
 	createInfo.poolSizeCount = uint32_t(poolSizes.size());
 	createInfo.pPoolSizes = poolSizes.data();
 
-	pool = vk::raii::DescriptorPool(device->GetImpl().device, createInfo);
-}
-
-DescriptorPool::Impl::~Impl() = default;
-
-DescriptorPool::DescriptorPool(const Device* device)
-{
-	m_impl = std::make_unique<Impl>(*this, device);
+	m_impl->pool = vk::raii::DescriptorPool(device.GetImpl().device, createInfo);
 }
 
 DescriptorPool::~DescriptorPool() = default;

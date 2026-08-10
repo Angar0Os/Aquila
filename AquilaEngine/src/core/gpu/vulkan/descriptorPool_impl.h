@@ -9,11 +9,7 @@ namespace core::gpu
 {
 	struct DescriptorPool::Impl
 	{
-		const Device* device;
-		vk::raii::DescriptorPool pool;
-
-		explicit Impl(DescriptorPool& _pool, const core::gpu::Device* _device);
-		~Impl();
+		vk::raii::DescriptorPool pool = nullptr;
 	};
 }
 

@@ -3,6 +3,8 @@
 #include <core/window.h>
 #include <core/gpu/device.h>
 
+#include <graphics/render/renderer.h>
+
 #pragma comment(lib, "AquilaEngine_x64_Debug")
 
 int main(int argc, char** argv)
@@ -13,6 +15,7 @@ int main(int argc, char** argv)
 	});
 
 	auto gpu = std::make_unique<core::gpu::Device>(*window);
+	auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
 
 	while (!window->ShouldClose())
 	{

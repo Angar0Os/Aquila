@@ -8,7 +8,7 @@
 
 using namespace core::gpu;
 
-Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
+Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 	: buffer(nullptr), device(_device), memory(nullptr), bufferSize(_info.size), mappedData(nullptr)
 {
 	if (_info.size == 0)
@@ -22,7 +22,7 @@ Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
 	bufferInfo.usage = utils::ToVulkan(_info.usage);
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
-	buffer = vk::raii::Buffer(_device->GetImpl().device, bufferInfo);
+	buffer = vk::raii::Buffer(_device.GetImpl().device, bufferInfo);
 
 	vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
 
@@ -46,7 +46,7 @@ Buffer::Impl::Impl(const Device* _device, const BufferCreateInfo& _info)
 		allocInfo.pNext = &allocFlagsInfo;
 	}
 
-	memory = vk::raii::DeviceMemory(_device->GetImpl().device, allocInfo);
+	memory = vk::raii::DeviceMemory(_device.GetImpl().device, allocInfo);
 	usage = _info.usage;
 
 	buffer.bindMemory(*memory, 0);
@@ -56,7 +56,7 @@ Buffer::Impl::~Impl() {}
 
 uint32_t Buffer::Impl::FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFlags _properties)
 {
-	vk::PhysicalDeviceMemoryProperties memProperties = device->GetImpl().physicalDevice.getMemoryProperties();
+	vk::PhysicalDeviceMemoryProperties memProperties = device.GetImpl().physicalDevice.getMemoryProperties();
 
 	for (uint32_t i = 0; i < memProperties.memoryTypeCount; ++i)
 	{
@@ -70,7 +70,7 @@ uint32_t Buffer::Impl::FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFl
 	throw std::runtime_error("Failed to find suitable memory type");
 }
 
-Buffer::Buffer(const core::gpu::Device* _device, const BufferCreateInfo& _info)
+Buffer::Buffer(const core::gpu::Device& _device, const BufferCreateInfo& _info)
 {
 	m_impl = std::make_unique<Impl>(_device, _info);
 }
@@ -105,7 +105,7 @@ uint64_t Buffer::GetDeviceAddress() const
 {
 	vk::BufferDeviceAddressInfo addressInfo{};
 	addressInfo.buffer = *m_impl->buffer;
-	return m_impl->device->GetImpl().device.getBufferAddress(addressInfo);
+	return m_impl->device.GetImpl().device.getBufferAddress(addressInfo);
 }
 
 void Buffer::CopyFrom(const void* _data, size_t _size, size_t _offset)

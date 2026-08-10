@@ -9,12 +9,9 @@ namespace core::gpu
 {
 	struct Pipeline::Impl
 	{
-		vk::raii::PipelineLayout pipelineLayout;
-		vk::raii::Pipeline pipeline;
-		utils::EPipelineType	type;
-
-		explicit Impl(const core::gpu::Device* device, const PipelineCreateInfo& info);
-		~Impl();
+		vk::raii::PipelineLayout	pipelineLayout	= nullptr;
+		vk::raii::Pipeline			pipeline		= nullptr;
+		utils::EPipelineType		type			= utils::EPipelineType::Graphics;
 	};
 }
 

@@ -6,12 +6,12 @@
 
 using namespace core::gpu;
 
-Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
-	: pipelineLayout(nullptr), pipeline(nullptr)
+Pipeline::Pipeline(const Device& device, const PipelineCreateInfo& info)
+	: m_impl(new Impl)
 {
 	std::vector<vk::raii::ShaderModule> shaderModules;
 	std::vector<vk::PipelineShaderStageCreateInfo> shaderStageInfos;
-	type = info.pipelineType;
+	m_impl->type = info.pipelineType;
 
 	for (const auto& stage : info.shaderStages)
 	{
@@ -19,7 +19,7 @@ Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
 		moduleInfo.codeSize = stage.code.size();
 		moduleInfo.pCode = reinterpret_cast<const uint32_t*>(stage.code.data());
 
-		shaderModules.emplace_back(device->GetImpl().device, moduleInfo);
+		shaderModules.emplace_back(device.GetImpl().device, moduleInfo);
 
 		vk::PipelineShaderStageCreateInfo shaderStageInfo{};
 		shaderStageInfo.stage = utils::ToVulkan(stage.stage);
@@ -63,7 +63,7 @@ Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
 	layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(vkPushConstants.size());
 	layoutInfo.pPushConstantRanges = vkPushConstants.data();
 
-	pipelineLayout = vk::raii::PipelineLayout(device->GetImpl().device, layoutInfo);
+	m_impl->pipelineLayout = vk::raii::PipelineLayout(device.GetImpl().device, layoutInfo);
 
 	if (std::find_if(info.shaderStages.begin(), info.shaderStages.end(), [](const auto& s) { return s.stage == utils::EShaderStageFlags::Compute; }) != info.shaderStages.end())
 	{
@@ -74,9 +74,9 @@ Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
 
 		vk::ComputePipelineCreateInfo pipelineInfo{};
 		pipelineInfo.stage = shaderStageInfos[0];
-		pipelineInfo.layout = *pipelineLayout;
+		pipelineInfo.layout = *m_impl->pipelineLayout;
 
-		pipeline = vk::raii::Pipeline(device->GetImpl().device, nullptr, pipelineInfo);
+		m_impl->pipeline = vk::raii::Pipeline(device.GetImpl().device, nullptr, pipelineInfo);
 	}
 	else
 	{
@@ -186,18 +186,11 @@ Pipeline::Impl::Impl(const Device* device, const PipelineCreateInfo& info)
 		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
-		pipelineInfo.layout = *pipelineLayout;
+		pipelineInfo.layout = *m_impl->pipelineLayout;
 		pipelineInfo.renderPass = nullptr;
 
-		pipeline = vk::raii::Pipeline(device->GetImpl().device, nullptr, pipelineInfo);
+		m_impl->pipeline = vk::raii::Pipeline(device.GetImpl().device, nullptr, pipelineInfo);
 	}
-}
-
-Pipeline::Impl::~Impl() = default;
-
-Pipeline::Pipeline(const Device* device, const PipelineCreateInfo& info)
-{
-	m_impl = std::make_unique<Impl>(device, info);
 }
 
 Pipeline::~Pipeline() = default;

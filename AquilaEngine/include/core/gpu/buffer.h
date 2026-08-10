@@ -22,7 +22,7 @@ namespace core::gpu
 		struct Impl;
 		std::unique_ptr<Impl> m_impl;
 	public:
-		explicit Buffer(const Device* _device, const BufferCreateInfo& _info);
+		explicit Buffer(const Device& _device, const BufferCreateInfo& _info);
 		~Buffer() noexcept;
 
 		void Map(void** _data);

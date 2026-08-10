@@ -33,7 +33,7 @@ void AccelerationStructure::CreateAccelerationStructureBuffer(const Device& _dev
 		.memoryProperties = utils::EMemoryProperty::DeviceLocal
 	};
 
-	m_impl->buffer = std::make_unique<Buffer>(&_device, bufferInfo);
+	m_impl->buffer = std::make_unique<Buffer>(_device, bufferInfo);
 }
 
 void AccelerationStructure::CreateScratchBuffer(const Device& _device, uint32_t _size)
@@ -54,7 +54,7 @@ void AccelerationStructure::CreateScratchBuffer(const Device& _device, uint32_t 
 		.memoryProperties = utils::EMemoryProperty::DeviceLocal
 	};
 
-	m_impl->scratchBuffer = std::make_unique<Buffer>(&_device, bufferInfo);
+	m_impl->scratchBuffer = std::make_unique<Buffer>(_device, bufferInfo);
 
 	VkDeviceAddress scratchAddr = m_impl->scratchBuffer->GetDeviceAddress();
 	if (scratchAddr == 0) {
@@ -161,7 +161,7 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 		.memoryProperties = utils::EMemoryProperty::HostVisible | utils::EMemoryProperty::HostCoherent
 	};
 
-	m_impl->instanceBuffer = std::make_unique<Buffer>(&_device, instanceBufferInfo);
+	m_impl->instanceBuffer = std::make_unique<Buffer>(_device, instanceBufferInfo);
 
 	std::vector<vk::AccelerationStructureInstanceKHR> vkInstances;
 	vkInstances.reserve(m_impl->instances.size());
