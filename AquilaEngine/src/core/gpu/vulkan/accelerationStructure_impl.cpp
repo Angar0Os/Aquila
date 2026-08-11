@@ -6,7 +6,7 @@
 
 using namespace core::gpu;
 
-AccelerationStructure::AccelerationStructure(Device& _device, const AccelerationStructureCreateInfo& _info)
+AccelerationStructure::AccelerationStructure(const Device& _device, const AccelerationStructureCreateInfo& _info)
 	: m_impl(new Impl)
 {
 	if (_info.preferFastTrace)
@@ -225,7 +225,7 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 	m_impl->accelerationStructure.emplace(_device.GetImpl().device, createInfo);
 }
 
-void AccelerationStructure::Build(Device& _device)
+void AccelerationStructure::Build(const Device& _device) const
 {
 	if (!m_impl->accelerationStructure.has_value())
 	{

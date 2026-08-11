@@ -643,7 +643,7 @@ CommandBuffer* Device::AcquireCommandBuffer() const
 	return cbPtr;
 }
 
-void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer)
+void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer) const 
 {
 	if (m_impl->commandBuffers.contains(commandBuffer))
 	{

@@ -23,7 +23,6 @@ namespace core::gpu
 		uint32_t FindMemoryType(uint32_t _typeFilter, vk::MemoryPropertyFlags _properties);
 
 		explicit Impl(const Device& _device, const BufferCreateInfo& _info);
-
 		~Impl() noexcept;
 	};
 }

@@ -49,6 +49,9 @@
     <Filter Include="Header Files\loaders">
       <UniqueIdentifier>{e192d5b7-d9b0-4bbc-8f63-45ee7db0baf0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\loaders">
+      <UniqueIdentifier>{4ce953d0-9394-4f7f-9144-d73c89bda96e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\window.cpp">
@@ -92,6 +95,12 @@
     </ClCompile>
     <ClCompile Include="src\graphics\render\renderer.cpp">
       <Filter>Source Files\graphics\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\render\mesh.cpp">
+      <Filter>Source Files\graphics\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\loaders\meshLoader.cpp">
+      <Filter>Source Files\loaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -174,6 +183,12 @@
       <Filter>Header Files\graphics\render</Filter>
     </ClInclude>
     <ClInclude Include="include\loaders\shaderLoader.h">
+      <Filter>Header Files\loaders</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\render\mesh.h">
+      <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
+    <ClInclude Include="include\loaders\meshLoader.h">
       <Filter>Header Files\loaders</Filter>
     </ClInclude>
   </ItemGroup>

@@ -46,9 +46,9 @@ namespace core::gpu
 		bool IsCpuFree() const;
 		bool IsGpuFree() const;
 
-		void Record(std::function<void()> _content);
+		void Record(std::function<void()> _content) const;
 
-		void Submit(const Device& _device, uint32_t _frameIndex, bool isImmediate = false);
+		void Submit(const Device& _device, bool isImmediate = false) const;
 
 		template<typename T>
 		void Bind(T& _input);
@@ -67,7 +67,7 @@ namespace core::gpu
 		void TransitionImageLayout(const Image& _image, utils::EImageLayout _oldLayout, utils::EImageLayout _newLayout, bool _isDepth = false);
 		void BlitImage(const Image& _srcImage, const Image& _dstImage);
 		
-		void CopyBuffer(const Buffer& _srcBuffer, const Buffer& _dstBuffer, uint32_t _size);
+		void CopyBuffer(const Buffer& _srcBuffer, const Buffer& _dstBuffer, uint32_t _size) const;
 		void CopyBufferToImage(const Buffer& _srcBuffer, const Image& _dstImage, uint32_t _width, uint32_t _height);
 
 		void PushConstants(const Pipeline& _pipeline, uint32_t _stageFlags, uint32_t _offset, uint32_t _size, const void* _pValues);

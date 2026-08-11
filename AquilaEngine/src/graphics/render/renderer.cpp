@@ -1,4 +1,5 @@
 #include <graphics/render/renderer.h>
+#include <graphics/render/mesh.h>
 
 #include <core/gpu/accelerationStructure.h>
 #include <core/gpu/buffer.h>
@@ -129,14 +130,14 @@ void Renderer::CreateAttachments()
 	{
 		core::gpu::ImageCreateInfo info
 		{
-			.width = width,
-			.height = height,
-			.mipLevels = 1,
-			.format = colorFormats[i],
-			.tiling = core::gpu::utils::EImageTiling::Optimal,
-			.usage = core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples = core::gpu::utils::ESampleCount::e1
+			.width				= width,
+			.height				= height,
+			.mipLevels			= 1,
+			.format				= colorFormats[i],
+			.tiling				= core::gpu::utils::EImageTiling::Optimal,
+			.usage				= core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
+			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
+			.samples			= core::gpu::utils::ESampleCount::e1
 		};
 
 		gBufferColorAttachments[i].image = std::make_unique<core::gpu::Image>(m_device, info);
@@ -144,19 +145,34 @@ void Renderer::CreateAttachments()
 
 		core::gpu::ImageCreateInfo depthInfo
 		{
-			.width = width,
-			.height = height,
-			.mipLevels = 1,
-			.format = core::gpu::utils::ETextureFormat::Depth32F,
-			.tiling = core::gpu::utils::EImageTiling::Optimal,
-			.usage = core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples = core::gpu::utils::ESampleCount::e1
+			.width				= width,
+			.height				= height,
+			.mipLevels			= 1,
+			.format				= core::gpu::utils::ETextureFormat::Depth32F,
+			.tiling				= core::gpu::utils::EImageTiling::Optimal,
+			.usage				= core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
+			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
+			.samples			= core::gpu::utils::ESampleCount::e1
 		};
 
 		gBufferDepthAttachment.image = std::make_unique<core::gpu::Image>(m_device, depthInfo);
 		gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
 	}
+
+	core::gpu::ImageCreateInfo lightingInfo{
+		.width				= width,
+		.height				= height,
+		.mipLevels			= 1,
+		.format				= core::gpu::utils::ETextureFormat::RGBA8_SRGB,
+		.tiling				= core::gpu::utils::EImageTiling::Optimal,
+		.usage				= core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::TransferSrc | core::gpu::utils::EImageUsage::Sampled,
+		.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples			= core::gpu::utils::ESampleCount::e1
+	};
+
+	lightingColorAttachments.resize(1);
+	lightingColorAttachments[0].image = std::make_unique<core::gpu::Image>(m_device, lightingInfo);
+	lightingColorAttachments[0].texture = std::make_unique<core::gpu::Texture>(m_device, *lightingColorAttachments[0].image);
 }
 
 void Renderer::CreateDescriptorSetLayout()
@@ -300,6 +316,7 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	: m_device(_device)
 {
 	CreateUniformBuffers();
+	// TODO : We need to create IB/VB properly
 
 	CreateAttachments();
 	CreateDescriptorSetLayout();

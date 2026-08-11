@@ -55,12 +55,12 @@ namespace core::gpu
         std::unique_ptr<Impl> m_impl;
 
     public:
-        AccelerationStructure(Device& _device, const AccelerationStructureCreateInfo& _info);
+        AccelerationStructure(const Device& _device, const AccelerationStructureCreateInfo& _info);
         ~AccelerationStructure();
 
         uint64_t GetDeviceAddress(const Device& _device) const;
 
-        void Build(Device& _device);
+        void Build(const Device& _device) const;
 
         void CreateBottomLevel(const Device& _device, const AccelerationStructureCreateInfo& _info);
         void CreateTopLevel(const Device& _device, const AccelerationStructureCreateInfo& _info);

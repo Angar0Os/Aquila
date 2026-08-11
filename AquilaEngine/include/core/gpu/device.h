@@ -23,7 +23,7 @@ namespace core::gpu
 		Image* AcquireNextImage();	
 
 		CommandBuffer* AcquireCommandBuffer() const;
-		void ReleaseCommandBuffer(CommandBuffer*& commandBuffer);
+		void ReleaseCommandBuffer(CommandBuffer*& commandBuffer) const;
 		std::pair<uint32_t, uint32_t> GetSwapchainExtent() const;
 		void Present();
 

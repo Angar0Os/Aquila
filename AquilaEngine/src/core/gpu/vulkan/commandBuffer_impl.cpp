@@ -42,7 +42,7 @@ bool CommandBuffer::IsGpuFree() const
 	return m_impl->isGpuFree.getStatus() == vk::Result::eSuccess;
 }
 
-void CommandBuffer::Record(std::function<void()> content)
+void CommandBuffer::Record(std::function<void()> content) const
 {
 	vk::CommandBufferBeginInfo beginInfo{};
 	beginInfo.flags = m_impl->isSingleTime ? vk::CommandBufferUsageFlagBits::eOneTimeSubmit : vk::CommandBufferUsageFlags(0);
@@ -53,15 +53,15 @@ void CommandBuffer::Record(std::function<void()> content)
 	m_impl->commandBuffer.end();
 }
 
-void CommandBuffer::Submit(const Device& _device, uint32_t _frameIndex, bool _isImmediate)
+void CommandBuffer::Submit(const Device& _device, bool _isImmediate) const
 {
-	if (_frameIndex >= _device.GetImpl().frameSyncObjects.size())
+	if (_device.currentFrame >= _device.GetImpl().frameSyncObjects.size())
 	{
 		throw std::runtime_error("Frame index is out of range.");
 	}
 
 	vk::CommandBuffer tempCmdBuf = *m_impl->commandBuffer;
-	auto& frameSync = _device.GetImpl().frameSyncObjects[_frameIndex];
+	auto& frameSync = _device.GetImpl().frameSyncObjects[_device.currentFrame];
 
 	vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
 
@@ -494,7 +494,7 @@ void CommandBuffer::BlitImage(const Image& _srcImage, const Image& _dstImage)
 	);
 }
 
-void CommandBuffer::CopyBuffer(const Buffer& _srcBuffer, const Buffer& _dstBuffer, uint32_t _size)
+void CommandBuffer::CopyBuffer(const Buffer& _srcBuffer, const Buffer& _dstBuffer, uint32_t _size) const
 {
 	vk::BufferCopy copyRegion;
 	copyRegion.srcOffset = 0;

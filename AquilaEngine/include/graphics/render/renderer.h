@@ -11,15 +11,6 @@ namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBu
 
 namespace graphics::render
 {
-	struct Vertex
-	{
-	public:
-		glm::vec3 position;
-		glm::vec2 uv;
-		glm::vec3 normal;
-		glm::vec4 tangent;
-	};
-
 	struct UniformBufferObject
 	{
 
@@ -88,7 +79,6 @@ namespace graphics::render
 		PassAttachment													gBufferDepthAttachment;
 
 		std::vector<PassAttachment>										lightingColorAttachments;
-		PassAttachment													lightingDepthAttachment;
 
 		core::gpu::AccelerationStructure* tlas = nullptr;
 	private:
