@@ -9,6 +9,10 @@ using namespace core::gpu;
 AccelerationStructure::AccelerationStructure(const Device& _device, const AccelerationStructureCreateInfo& _info)
 	: m_impl(new Impl)
 {
+	m_impl->type = _info.type;
+	m_impl->geometries = _info.geometries;
+	m_impl->instances = _info.instances;
+
 	if (_info.preferFastTrace)
 		m_impl->buildFlags |= vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace;
 	if (_info.allowUpdate)
@@ -18,9 +22,6 @@ AccelerationStructure::AccelerationStructure(const Device& _device, const Accele
 		CreateBottomLevel(_device, _info);
 	else
 		CreateTopLevel(_device, _info);
-
-	m_impl->type = _info.type;
-	m_impl->geometries = _info.geometries;
 
 	Build(_device);
 }
