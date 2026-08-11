@@ -5,7 +5,7 @@
 #include <string>
 #include <memory>
 
-namespace graphics::render { class Mesh; struct MeshInstance; }
+namespace graphics::render { struct Mesh; struct MeshInstance; }
 namespace core::gpu { class Device; }
 
 namespace loaders

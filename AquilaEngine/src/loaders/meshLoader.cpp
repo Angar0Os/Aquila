@@ -9,6 +9,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <tiny_gltf.h>
 
+#include <algorithm>
+#include <stdexcept>
+#include <filesystem>
 #include <iostream>
 
 using namespace loaders;
