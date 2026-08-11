@@ -38,18 +38,18 @@ namespace graphics::render
 
 	struct MeshInstance
 	{
-		std::string name = "mesh";
-		std::string path = "undefined";
+		std::string				name = "mesh";
+		std::string				path = "undefined";
 
-		std::vector<Vertex>	vertices;
+		std::vector<Vertex>		vertices;
 		std::vector<uint32_t>	indices;
 		std::vector<SubMesh>	subMeshes;
 	};
 
 	struct Mesh
 	{
-		const core::gpu::Device& device;
-		MeshInstance				instance;
+		const core::gpu::Device&							device;
+		MeshInstance										instance;
 
 		std::unique_ptr<core::gpu::Buffer>					vertexBuffer;
 		std::unique_ptr<core::gpu::Buffer>					indexBuffer;

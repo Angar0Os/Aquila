@@ -4,7 +4,6 @@
 #include <core/gpu/accelerationStructure.h>
 #include <core/gpu/buffer.h>
 #include <core/gpu/commandBuffer.h>
-#include <core/gpu/device.h>
 #include <core/gpu/descriptorSet.h>
 #include <core/gpu/descriptorSetLayout.h>
 #include <core/gpu/image.h>
@@ -48,6 +47,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 		{core::gpu::utils::EShaderStageFlags::Fragment, shaderCode, "fragMain"}
 	};
 	pipelineInfo.vertexBindings = { vertexBinding };
+	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Graphics;
 	pipelineInfo.vertexAttributes = vertexAttributes;
 	pipelineInfo.topology = core::gpu::utils::EPrimitiveTopology::TriangleList;
 	pipelineInfo.polygonMode = core::gpu::utils::EPolygonMode::Fill;
@@ -316,7 +316,6 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	: m_device(_device)
 {
 	CreateUniformBuffers();
-	// TODO : We need to create IB/VB properly
 
 	CreateAttachments();
 	CreateDescriptorSetLayout();
@@ -331,7 +330,158 @@ Renderer::Renderer(const core::gpu::Device& _device)
 
 Renderer::~Renderer() = default;
 
-void Renderer::Render(core::gpu::CommandBuffer& _cmdBuf)
+void Renderer::Render(core::gpu::CommandBuffer& _cmdBuf, core::gpu::Image& _outputImage)
 {
+	//m_device.BeginFrame(); // TODO : Note, this might cause an issue in the future with semaphore alignment.
 
+	//BuildTLAS();
+	//RebuildAccelerationStructures();
+	//UpdateUniformBuffer(m_currentFrame);
+
+	_cmdBuf.Record([&]() {
+		DrawGBuffer(_cmdBuf);
+		//DrawLighting(_cmdBuf);
+
+		_cmdBuf.TransitionImageLayout(
+			_outputImage,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::TransferDst,
+			false
+		);
+
+		_cmdBuf.TransitionImageLayout(
+			_outputImage,
+			core::gpu::utils::EImageLayout::TransferDst,
+			core::gpu::utils::EImageLayout::Present,
+			false
+		);
+	});
+}
+
+void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
+{
+	uint32_t prevFrame = (m_device.currentFrame + m_device.FRAMES_IN_FLIGHT - 1) % m_device.FRAMES_IN_FLIGHT;
+
+	std::vector<ColorAttachmentDesc> colorDescs;
+
+	for (const auto& colorAttachment : gBufferColorAttachments)
+	{
+		ColorAttachmentDesc desc{};
+		desc.image = colorAttachment.image.get();
+		desc.clear = true;
+		colorDescs.push_back(desc);
+		
+		_cmdBuf.TransitionImageLayout(
+			*colorAttachment.image,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::ColorAttachment,
+			false
+		);
+	}
+
+	DepthAttachmentDesc depthDesc{};
+
+	if (gBufferDepthAttachment.image)
+	{
+		depthDesc.image = gBufferDepthAttachment.image.get();
+		depthDesc.clear = true;
+		depthDesc.clearDepth = 1.0f;
+
+		_cmdBuf.TransitionImageLayout(
+			*gBufferDepthAttachment.image,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::DepthStencilAttachment,
+			true
+		);
+	}
+
+	std::vector<core::gpu::CommandBuffer::RenderingAttachmentInfo> colorInfos;
+	colorInfos.reserve(gBufferColorAttachments.size());
+
+	for (const auto& colorAttachment : gBufferColorAttachments)
+	{
+		core::gpu::CommandBuffer::RenderingAttachmentInfo info
+		{
+			.image = colorAttachment.image.get(),
+			.clear = true,
+		};
+		colorInfos.push_back(info);
+	}
+
+	core::gpu::CommandBuffer::DepthAttachmentInfo depthInfo
+	{
+		.image		= gBufferDepthAttachment.image.get(),
+		.clear		= true,
+		.clearDepth = 1.0f
+	};
+
+	_cmdBuf.BeginRendering(m_device, colorInfos, depthInfo);
+	_cmdBuf.Bind<core::gpu::Pipeline>(*m_gBufferPipeline);
+	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
+	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
+
+	if (!m_meshInstances.empty())
+	{
+		for (const auto& [mesh, transform] : m_meshInstances)
+		{
+			if (!mesh->vertexBuffer || !mesh->indexBuffer)
+				continue;
+
+			_cmdBuf.Bind<core::gpu::Buffer>(*mesh->vertexBuffer);
+			_cmdBuf.Bind<core::gpu::Buffer>(*mesh->indexBuffer);
+
+			GBufferPushConstants pushConstants{};
+			pushConstants.model = transform;
+
+			auto it = m_prevMeshInstances[prevFrame].find(mesh);
+			if (it != m_prevMeshInstances[prevFrame].end())
+			{
+				pushConstants.prevModel = it->second;
+			}
+			else
+			{
+				pushConstants.prevModel = transform;
+			}
+
+			_cmdBuf.PushConstants
+			(
+				*m_gBufferPipeline,
+				static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Vertex),
+				0,
+				sizeof(GBufferPushConstants),
+				&pushConstants
+			);
+
+			/*for (const auto& submesh : mesh->subMeshes)
+			{
+				graphics::resources::Material* mat = mesh->GetMaterial(submesh.materialIndex);
+				if (!mat) mat = m_fallbackMaterial.get();
+
+				if (mat && mat->descriptorSet)
+					cmd.BindDescriptorSets(m_pipeline.get(), mat->descriptorSet.get(), 0, 1);
+
+				cmd.DrawIndexed(submesh.indexCount, 1, submesh.firstIndex, submesh.vertexOffset, 0);
+			}*/ // TODO : We will need to activate this once we will add materials.
+
+			m_prevMeshInstances[m_device.currentFrame][mesh] = transform;
+		}
+	}
+
+	_cmdBuf.EndRendering();
+	for (auto& colorAttachment : gBufferColorAttachments)
+	{
+		_cmdBuf.TransitionImageLayout(
+			*colorAttachment.image,
+			core::gpu::utils::EImageLayout::ColorAttachment, 
+			core::gpu::utils::EImageLayout::ShaderReadOnly,
+			false
+		);
+	}
+
+	_cmdBuf.TransitionImageLayout(
+		*gBufferDepthAttachment.image, 
+		core::gpu::utils::EImageLayout::DepthStencilAttachment, 
+		core::gpu::utils::EImageLayout::ShaderReadOnly, 
+		true
+	);
 }

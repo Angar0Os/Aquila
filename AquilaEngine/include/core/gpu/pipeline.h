@@ -44,9 +44,9 @@ namespace core::gpu
 
 	struct PipelineCreateInfo
 	{
-		std::vector<ShaderStage> shaderStages;
-		std::vector<VertexInputBinding> vertexBindings;
-		std::vector<VertexInputAttribute> vertexAttributes;
+		std::vector<ShaderStage>			shaderStages;
+		std::vector<VertexInputBinding>		vertexBindings;
+		std::vector<VertexInputAttribute>	vertexAttributes;
 		
 		utils::EPipelineType		pipelineType;
 		utils::EPrimitiveTopology	topology;

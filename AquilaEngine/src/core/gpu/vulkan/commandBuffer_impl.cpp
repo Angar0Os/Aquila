@@ -96,7 +96,8 @@ void CommandBuffer::Submit(const Device& _device, bool _isImmediate) const
 template<>
 void CommandBuffer::Bind<Buffer>(Buffer& _buffer)
 {
-	vk::DeviceSize vkOffset = 10;
+	vk::DeviceSize vkOffset = 0;
+	// TODO : We will need to fix this offset after Evoke.
 
 	if (_buffer.GetImpl().usage == utils::EBufferUsage::IndexBuffer)
 	{

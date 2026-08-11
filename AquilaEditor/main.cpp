@@ -26,6 +26,8 @@ int main(int argc, char** argv)
 	{
 		window->PollEvents();
 
+		renderer->Render(*gpu->AcquireCommandBuffer(), *gpu->AcquireNextImage());
+
 		gpu->AcquireNextImage();
 		gpu->Present();
 	}

@@ -2,15 +2,20 @@
 #define AQUILA_ENGINE_GRAPHICS_RENDER_RENDERER_H
 #pragma once
 
+#include <core/gpu/device.h>
+
 #include <glm/glm.hpp>
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
-namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBuffer; class Device; class DescriptorSet;  class DescriptorSetLayout; class Image; class Pipeline; class Texture; }
+namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBuffer; class DescriptorSet;  class DescriptorSetLayout; class Image; class Pipeline; class Texture; }
 
 namespace graphics::render
 {
+	struct Mesh;
+
 	struct UniformBufferObject
 	{
 
@@ -51,7 +56,7 @@ namespace graphics::render
 		explicit Renderer(const core::gpu::Device& _device);
 		~Renderer() noexcept;
 
-		void Render(core::gpu::CommandBuffer& _cmdBuf);
+		void Render(core::gpu::CommandBuffer& _cmdBuf, core::gpu::Image& _outputImage);
 
 		void CreateDescriptorSets();
 		void UpdateDescriptorSets();
@@ -64,6 +69,8 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildLightingPipeline();
 
+		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
+		//void DrawLighting(core::gpu::CommandBuffer& _cmdBuf);
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	lightingDsLayouts;
@@ -84,10 +91,13 @@ namespace graphics::render
 	private:
 		const core::gpu::Device& m_device;
 
-		std::unique_ptr<core::gpu::Pipeline> m_gBufferPipeline;
-		std::unique_ptr<core::gpu::Pipeline> m_lightingPipeline;
-		std::unique_ptr<core::gpu::Pipeline> m_shadowPipeline;
-		std::unique_ptr<core::gpu::Pipeline> m_giPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_gBufferPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_lightingPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
+
+		std::vector<std::pair<Mesh*, glm::mat4>>	m_meshInstances;
+		std::unordered_map<Mesh*, glm::mat4>		m_prevMeshInstances[core::gpu::Device::FRAMES_IN_FLIGHT];
 	};
 }
 
