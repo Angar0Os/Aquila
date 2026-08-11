@@ -52,7 +52,7 @@ void Mesh::CreateBuffers()
 	auto stagingIndexBuffer = std::make_unique<core::gpu::Buffer>(device, stagingIndexInfo);
 
 	stagingVertexBuffer->CopyFrom(instance.vertices.data(), vertexBufferSize);
-	stagingIndexBuffer->CopyFrom(instance.indices.data(), vertexBufferSize);
+	stagingIndexBuffer->CopyFrom(instance.indices.data(), indicesBufferSize);
 
 	core::gpu::BufferCreateInfo vertexInfo {
 		.size				= vertexBufferSize,

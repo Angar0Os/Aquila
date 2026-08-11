@@ -14,10 +14,13 @@ AccelerationStructure::AccelerationStructure(const Device& _device, const Accele
 	if (_info.allowUpdate)
 		m_impl->buildFlags |= vk::BuildAccelerationStructureFlagBitsKHR::eAllowUpdate;
 
-	if (m_impl->type == utils::EAccelerationStructureType::BottomLevel)
+	if (_info.type == utils::EAccelerationStructureType::BottomLevel)
 		CreateBottomLevel(_device, _info);
 	else
 		CreateTopLevel(_device, _info);
+
+	m_impl->type = _info.type;
+	m_impl->geometries = _info.geometries;
 
 	Build(_device);
 }
