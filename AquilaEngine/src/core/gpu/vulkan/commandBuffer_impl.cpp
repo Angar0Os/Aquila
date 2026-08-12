@@ -573,10 +573,6 @@ void CommandBuffer::AccelerationStructureBarrier()
 	m_impl->commandBuffer.pipelineBarrier2(dep);
 }
 
-void CommandBuffer::BuildAccelerationStructure(const core::gpu::AccelerationStructure& _accelerationStructure)
-{
-}
-
 void CommandBuffer::TraceRays(const Device& _device, 
 	void* _raygenSBT, uint32_t _raygenOffset, uint32_t _raygenStride, 
 	void* _missSBT, uint32_t _missOffset, uint32_t _missStride, 

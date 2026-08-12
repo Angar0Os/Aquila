@@ -16,6 +16,7 @@ namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBu
 namespace graphics::render
 {
 	struct Mesh;
+	struct Material;
 
 	struct UniformBufferObject
 	{
@@ -117,8 +118,13 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 
+		std::unique_ptr<graphics::render::Material> m_fallbackMaterial;
 		std::vector<std::pair<Mesh*, glm::mat4>>	m_meshInstances;
 		std::unordered_map<Mesh*, glm::mat4>		m_prevMeshInstances[core::gpu::Device::FRAMES_IN_FLIGHT];
+
+		// TODO : We need to find a better way of doing this.
+		std::unique_ptr<core::gpu::AccelerationStructure> m_fallbackTlas;
+		void CreateFallbackTLAS();
 
 		std::vector<std::unique_ptr<core::gpu::AccelerationStructure>>	m_tlasPerFrame;
 		std::vector<LightData>											m_lights;

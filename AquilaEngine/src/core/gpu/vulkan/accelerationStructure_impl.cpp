@@ -156,11 +156,11 @@ void AccelerationStructure::CreateBottomLevel(const Device& _device, const Accel
 
 void AccelerationStructure::CreateTopLevel(const Device& _device, const AccelerationStructureCreateInfo& _info)
 {
-	if (m_impl->instances.empty())
-		throw std::runtime_error("TLAS requires at least one instance");
+	uint32_t instanceCount = static_cast<uint32_t>(m_impl->instances.size());
+	size_t	bufferInstanceCount = std::max<size_t>(instanceCount, 1);
 
 	BufferCreateInfo instanceBufferInfo{
-		.size = sizeof(vk::AccelerationStructureInstanceKHR) * m_impl->instances.size(),
+		.size = sizeof(vk::AccelerationStructureInstanceKHR) * bufferInstanceCount,
 		.usage = utils::EBufferUsage::AccelerationStructureBuildInput | utils::EBufferUsage::ShaderDeviceAddress,
 		.memoryProperties = utils::EMemoryProperty::HostVisible | utils::EMemoryProperty::HostCoherent
 	};
@@ -186,7 +186,10 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 		vkInstances.push_back(vkInstance);
 	}
 
-	m_impl->instanceBuffer->CopyFrom(vkInstances.data(), sizeof(vk::AccelerationStructureInstanceKHR) * vkInstances.size(), 0);
+	if (!vkInstances.empty())
+	{
+		m_impl->instanceBuffer->CopyFrom(vkInstances.data(), sizeof(vk::AccelerationStructureInstanceKHR) * vkInstances.size(), 0);
+	}
 
 	vk::AccelerationStructureGeometryInstancesDataKHR instancesData{};
 	instancesData.setArrayOfPointers(VK_FALSE);
@@ -207,12 +210,10 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 	buildInfo.setGeometryCount(1);
 	buildInfo.setPGeometries(&geometry);
 
-	uint32_t instanceCount = static_cast<uint32_t>(m_impl->instances.size());
-
 	m_impl->buildSizes = _device.GetImpl().device.getAccelerationStructureBuildSizesKHR(
 		vk::AccelerationStructureBuildTypeKHR::eDevice,
 		buildInfo,
-		{ instanceCount }
+		{ instanceCount } 
 	);
 
 	if (m_impl->buildSizes.accelerationStructureSize == 0)
@@ -330,11 +331,6 @@ void AccelerationStructure::Build(const Device& _device) const
 	}
 	else
 	{
-		if (m_impl->instances.empty())
-		{
-			throw std::runtime_error("Cannot build TLAS with no instances");
-		}
-
 		if (!m_impl->instanceBuffer)
 		{
 			throw std::runtime_error("Instance buffer not created");
@@ -373,7 +369,7 @@ void AccelerationStructure::Build(const Device& _device) const
 		}
 
 		vk::AccelerationStructureBuildRangeInfoKHR rangeInfo{};
-		rangeInfo.primitiveCount = static_cast<uint32_t>(m_impl->instances.size());
+		rangeInfo.primitiveCount = static_cast<uint32_t>(m_impl->instances.size()); // 0 si vide, OK
 		rangeInfo.primitiveOffset = 0;
 		rangeInfo.firstVertex = 0;
 		rangeInfo.transformOffset = 0;

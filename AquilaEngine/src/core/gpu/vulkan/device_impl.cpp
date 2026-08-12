@@ -120,7 +120,10 @@ Device::Device(const Window& _wnd)
 	m_impl->CreateSyncObjects();
 }
 
-Device::~Device() {}
+Device::~Device() 
+{
+	m_impl->device.waitIdle();
+}
 
 void Device::Impl::CreateInstance()
 {

@@ -1,5 +1,6 @@
 #include <graphics/render/renderer.h>
 #include <graphics/render/mesh.h>
+#include <graphics/render/material.h>
 
 #include <core/gpu/accelerationStructure.h>
 #include <core/gpu/buffer.h>
@@ -70,7 +71,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 {
-	// TODO : Passer le pipeline en compute.
+	// TODO : Switch pipeline to compute.
 	auto shaderCode = loaders::ReadFile("assets/shaders/lighting.spv");
 
 	core::gpu::PipelineCreateInfo pipelineInfo{};
@@ -104,13 +105,13 @@ void Renderer::CreateUniformBuffers()
 	uniformBuffers.clear();
 	uniformBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
 
-	
+
 	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
 	{
 		core::gpu::BufferCreateInfo bufferInfo{
-			.size				= sizeof(UniformBufferObject),
-			.usage				= core::gpu::utils::EBufferUsage::UniformBuffer,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+			.size = sizeof(UniformBufferObject),
+			.usage = core::gpu::utils::EBufferUsage::UniformBuffer,
+			.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 		};
 		uniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
 	}
@@ -133,44 +134,45 @@ void Renderer::CreateAttachments()
 	{
 		core::gpu::ImageCreateInfo info
 		{
-			.width				= width,
-			.height				= height,
-			.mipLevels			= 1,
-			.format				= colorFormats[i],
-			.tiling				= core::gpu::utils::EImageTiling::Optimal,
-			.usage				= core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples			= core::gpu::utils::ESampleCount::e1
+			.width = width,
+			.height = height,
+			.mipLevels = 1,
+			.format = colorFormats[i],
+			.tiling = core::gpu::utils::EImageTiling::Optimal,
+			.usage = core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::Sampled,
+			.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+			.samples = core::gpu::utils::ESampleCount::e1
 		};
 
 		gBufferColorAttachments[i].image = std::make_unique<core::gpu::Image>(m_device, info);
 		gBufferColorAttachments[i].texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferColorAttachments[i].image);
-
-		core::gpu::ImageCreateInfo depthInfo
-		{
-			.width				= width,
-			.height				= height,
-			.mipLevels			= 1,
-			.format				= core::gpu::utils::ETextureFormat::Depth32F,
-			.tiling				= core::gpu::utils::EImageTiling::Optimal,
-			.usage				= core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
-			.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
-			.samples			= core::gpu::utils::ESampleCount::e1
-		};
-
-		gBufferDepthAttachment.image = std::make_unique<core::gpu::Image>(m_device, depthInfo);
-		gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
 	}
 
+	core::gpu::ImageCreateInfo depthInfo
+	{
+		.width = width,
+		.height = height,
+		.mipLevels = 1,
+		.format = core::gpu::utils::ETextureFormat::Depth32F,
+		.tiling = core::gpu::utils::EImageTiling::Optimal,
+		.usage = core::gpu::utils::EImageUsage::DepthStencilAttachment | core::gpu::utils::EImageUsage::Sampled,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples = core::gpu::utils::ESampleCount::e1
+	};
+
+	gBufferDepthAttachment.image = std::make_unique<core::gpu::Image>(m_device, depthInfo);
+	gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
+
+
 	core::gpu::ImageCreateInfo lightingInfo{
-		.width				= width,
-		.height				= height,
-		.mipLevels			= 1,
-		.format				= core::gpu::utils::ETextureFormat::RGBA8_SRGB,
-		.tiling				= core::gpu::utils::EImageTiling::Optimal,
-		.usage				= core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::TransferSrc | core::gpu::utils::EImageUsage::Sampled,
-		.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
-		.samples			= core::gpu::utils::ESampleCount::e1
+		.width = width,
+		.height = height,
+		.mipLevels = 1,
+		.format = core::gpu::utils::ETextureFormat::RGBA8_SRGB,
+		.tiling = core::gpu::utils::EImageTiling::Optimal,
+		.usage = core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::TransferSrc | core::gpu::utils::EImageUsage::Sampled,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples = core::gpu::utils::ESampleCount::e1
 	};
 
 	lightingColorAttachments.resize(1);
@@ -277,6 +279,24 @@ void Renderer::CreateMaterialLayout()
 	);
 }
 
+void Renderer::CreateFallbackTLAS()
+{
+	core::gpu::AccelerationStructureCreateInfo emptyTlasInfo{};
+	emptyTlasInfo.type = core::gpu::utils::EAccelerationStructureType::TopLevel;
+	emptyTlasInfo.instances = {};
+	emptyTlasInfo.preferFastTrace = true;
+	emptyTlasInfo.allowUpdate = false;
+
+	m_fallbackTlas = std::make_unique<core::gpu::AccelerationStructure>(m_device, emptyTlasInfo);
+
+	auto commandBuffer = m_device.AcquireCommandBuffer();
+	commandBuffer->Record([&]() {
+		m_fallbackTlas->Build(m_device);
+		});
+	commandBuffer->Submit(m_device, true);
+	m_device.ReleaseCommandBuffer(commandBuffer);
+}
+
 void Renderer::CreateDescriptorSets()
 {
 	gBufferDescriptorSets.clear();
@@ -297,6 +317,12 @@ void Renderer::CreateDescriptorSets()
 	{
 		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *lightingDsLayouts[0]);
 		ds->Bind(0, *uniformBuffers[i]);
+		ds->Bind(1, *gBufferColorAttachments[0].texture); 
+		ds->Bind(2, *gBufferColorAttachments[1].texture); 
+		ds->Bind(3, *gBufferDepthAttachment.texture);     
+		ds->Bind(4, *m_fallbackTlas);                     
+		ds->Bind(5, *m_fallbackMaterial->albedoTexture);  
+		ds->Bind(6, *m_fallbackMaterial->albedoTexture);  
 		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
 	}
@@ -304,9 +330,10 @@ void Renderer::CreateDescriptorSets()
 
 void Renderer::UpdateDescriptorSets()
 {
-	if (!tlas) return;
+	auto& currentTlas = m_tlasPerFrame[m_device.currentFrame];
+	if (!currentTlas) return;
 
-	lightingDescriptorSets[m_device.currentFrame]->Bind(4, *tlas);
+	lightingDescriptorSets[m_device.currentFrame]->Bind(4, *currentTlas);
 	lightingDescriptorSets[m_device.currentFrame]->Update(m_device);
 }
 
@@ -322,8 +349,10 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	m_gBufferPipeline = BuildGBufferPipeline();
 	m_lightingPipeline = BuildLightingPipeline();
 
+	m_fallbackMaterial = std::make_unique<graphics::render::Material>(m_device, *materialLayout);
+	CreateFallbackTLAS();
+
 	CreateDescriptorSets();
-	//CreateFallbackMaterial()
 }
 
 Renderer::~Renderer() = default;
@@ -336,6 +365,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 	BuildTLAS();
 	RebuildAccelerationStructures();
 	UpdateUniformBuffers();
+	UpdateDescriptorSets(); 
 
 	_cmdBuf->Record([&]() {
 		DrawGBuffer(*_cmdBuf);
@@ -356,6 +386,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 		);
 		});
 
+	_cmdBuf->Submit(m_device, false);
 	m_device.ReleaseCommandBuffer(_cmdBuf);
 }
 
@@ -382,7 +413,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 		desc.image = colorAttachment.image.get();
 		desc.clear = true;
 		colorDescs.push_back(desc);
-		
+
 		_cmdBuf.TransitionImageLayout(
 			*colorAttachment.image,
 			core::gpu::utils::EImageLayout::Undefined,
@@ -422,8 +453,8 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 
 	core::gpu::CommandBuffer::DepthAttachmentInfo depthInfo
 	{
-		.image		= gBufferDepthAttachment.image.get(),
-		.clear		= true,
+		.image = gBufferDepthAttachment.image.get(),
+		.clear = true,
 		.clearDepth = 1.0f
 	};
 
@@ -465,16 +496,18 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 				&pushConstants
 			);
 
-			/*for (const auto& submesh : mesh->subMeshes)
+			for (const auto& submesh : mesh->subMeshes)
 			{
-				graphics::resources::Material* mat = mesh->GetMaterial(submesh.materialIndex);
+				graphics::render::Material* mat = mesh->GetMaterial(submesh.materialIndex);
 				if (!mat) mat = m_fallbackMaterial.get();
 
 				if (mat && mat->descriptorSet)
-					cmd.BindDescriptorSets(m_pipeline.get(), mat->descriptorSet.get(), 0, 1);
+				{
+					_cmdBuf.Bind(*mat->descriptorSet, *m_gBufferPipeline, 1u);
+				}
 
-				cmd.DrawIndexed(submesh.indexCount, 1, submesh.firstIndex, submesh.vertexOffset, 0);
-			}*/ // TODO : We will need to activate this once we will add materials.
+				_cmdBuf.DrawIndexed(submesh.indexCount, 1, submesh.firstIndex, submesh.vertexOffset, 0);
+			}
 
 			m_prevMeshInstances[m_device.currentFrame][mesh] = transform;
 		}
@@ -486,16 +519,16 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 	{
 		_cmdBuf.TransitionImageLayout(
 			*colorAttachment.image,
-			core::gpu::utils::EImageLayout::ColorAttachment, 
+			core::gpu::utils::EImageLayout::ColorAttachment,
 			core::gpu::utils::EImageLayout::ShaderReadOnly,
 			false
 		);
 	}
 
 	_cmdBuf.TransitionImageLayout(
-		*gBufferDepthAttachment.image, 
-		core::gpu::utils::EImageLayout::DepthStencilAttachment, 
-		core::gpu::utils::EImageLayout::ShaderReadOnly, 
+		*gBufferDepthAttachment.image,
+		core::gpu::utils::EImageLayout::DepthStencilAttachment,
+		core::gpu::utils::EImageLayout::ShaderReadOnly,
 		true
 	);
 }
@@ -514,8 +547,8 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 
 	DepthAttachmentDesc lightDepthDesc
 	{
-		.image		= nullptr,
-		.clear		= true,
+		.image = nullptr,
+		.clear = true,
 		.clearDepth = 1.0f
 	};
 
@@ -528,8 +561,8 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 
 	core::gpu::CommandBuffer::RenderingAttachmentInfo colorInfos
 	{
-		.image	= lightingColorAttachments[0].image.get(),
-		.clear	= true,
+		.image = lightingColorAttachments[0].image.get(),
+		.clear = true,
 		.clearR = 0.0f,
 		.clearG = 0.0f,
 		.clearB = 0.0f,
@@ -541,7 +574,7 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.Bind(*lightingDescriptorSets[m_device.currentFrame], *m_lightingPipeline, 0u);
 	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
-	_cmdBuf.DrawIndexed(3, 1, 0, 0, 0); 
+	_cmdBuf.DrawIndexed(3, 1, 0, 0, 0);
 	_cmdBuf.EndRendering();
 
 	_cmdBuf.TransitionImageLayout(
@@ -628,7 +661,7 @@ void Renderer::RebuildAccelerationStructures()
 
 	commandBuffer->Record([&]() {
 		m_tlasPerFrame[m_device.currentFrame]->Build(m_device);
-	});
+		});
 	commandBuffer->Submit(m_device, true);
 
 	m_device.ReleaseCommandBuffer(commandBuffer);

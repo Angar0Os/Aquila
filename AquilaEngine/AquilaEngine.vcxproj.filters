@@ -191,5 +191,8 @@
     <ClInclude Include="include\loaders\meshLoader.h">
       <Filter>Header Files\loaders</Filter>
     </ClInclude>
+    <ClInclude Include="include\graphics\render\material.h">
+      <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

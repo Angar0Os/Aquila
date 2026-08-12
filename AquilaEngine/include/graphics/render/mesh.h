@@ -7,6 +7,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include <graphics/render/material.h>
+
 namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBuffer; class Device; }
 
 namespace graphics::render
@@ -58,6 +60,7 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::AccelerationStructure>	blas;
 
 		std::vector<SubMesh>								subMeshes;
+		std::vector<Material*>								materials;
 
 		explicit Mesh(const core::gpu::Device& _device, MeshInstance _instance);
 		~Mesh() noexcept;
@@ -66,6 +69,14 @@ namespace graphics::render
 		void CreateBLAS();
 
 		void EnsureDefaultSubmesh(); // TODO : Need to know if this is rly important.
+
+		Material* GetMaterial(uint32_t index)
+		{
+			if (index < materials.size())
+				return materials[index];
+
+			return nullptr;
+		}
 	};
 }
 
