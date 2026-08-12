@@ -3,22 +3,10 @@ cbuffer UniformBufferObject
 {
     float4x4 view;
     float4x4 proj;
-    float4x4 lightSpaceMatrix;
     float4x4 viewProjInverse;
     float4x4 prevViewProj;
     float4x4 prevViewProjInverse;
-    float4 viewPos;
-    struct LightData
-    {
-        float4 position;
-        float4 color;
-        float  intensity;
-        int    enabled;
-        int    type;
-        float  lightRadius;
-    };
-    LightData lights[10];
-    int      numLights;
+    float4   viewPos;
     uint     frameCount;
 };
 
@@ -32,8 +20,6 @@ struct MaterialData
 {
     float4 baseColor;
     float4 params;
-    // params.x = metalness multiplier
-    // params.y = roughness multiplier
 };
 
 [[vk::binding(0, 1)]]

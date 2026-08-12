@@ -52,6 +52,9 @@
     <Filter Include="Source Files\loaders">
       <UniqueIdentifier>{4ce953d0-9394-4f7f-9144-d73c89bda96e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\shaders">
+      <UniqueIdentifier>{f2087e31-5cc0-4dae-a1b0-8b168727d294}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\window.cpp">
@@ -194,5 +197,13 @@
     <ClInclude Include="include\graphics\render\material.h">
       <Filter>Header Files\graphics\render</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\bin\assets\shaders\gbuffer.slang">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
+    <None Include="..\bin\assets\shaders\lighting.slang">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

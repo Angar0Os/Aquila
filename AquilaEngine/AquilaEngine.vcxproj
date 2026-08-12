@@ -240,6 +240,10 @@
     <ClInclude Include="src\core\gpu\vulkan\pipeline_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\texture_impl.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\bin\assets\shaders\gbuffer.slang" />
+    <None Include="..\bin\assets\shaders\lighting.slang" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

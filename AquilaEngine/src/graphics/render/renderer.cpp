@@ -372,10 +372,22 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 		DrawLighting(*_cmdBuf);
 
 		_cmdBuf->TransitionImageLayout(
+			*lightingColorAttachments[0].image,
+			core::gpu::utils::EImageLayout::ShaderReadOnly,
+			core::gpu::utils::EImageLayout::TransferSrc,
+			false
+		);
+
+		_cmdBuf->TransitionImageLayout(
 			_outputImage,
 			core::gpu::utils::EImageLayout::Undefined,
 			core::gpu::utils::EImageLayout::TransferDst,
 			false
+		);
+
+		_cmdBuf->BlitImage(
+			*lightingColorAttachments[0].image,
+			_outputImage
 		);
 
 		_cmdBuf->TransitionImageLayout(
@@ -384,7 +396,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 			core::gpu::utils::EImageLayout::Present,
 			false
 		);
-		});
+	});
 
 	_cmdBuf->Submit(m_device, false);
 	m_device.ReleaseCommandBuffer(_cmdBuf);
