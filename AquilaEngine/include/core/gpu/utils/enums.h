@@ -6,6 +6,14 @@
 
 namespace core::gpu::utils
 {
+	enum class ELightType : uint32_t
+	{
+		Directional,
+		Point,
+		Spot
+	};
+
+
 	enum class ETextureFormat
 
 	{

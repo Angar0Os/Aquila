@@ -547,6 +547,11 @@ void CommandBuffer::PushConstants(const Pipeline& _pipeline, uint32_t _stageFlag
 	);
 }
 
+void CommandBuffer::DrawIndexed(uint32_t _indexCount, uint32_t _instanceCount, uint32_t _firstIndex, uint32_t _vertexOffset, uint32_t _firstInstance) const
+{
+	m_impl->commandBuffer.drawIndexed(_indexCount, _instanceCount, _firstIndex, _vertexOffset, _firstInstance);
+}
+
 void CommandBuffer::AccelerationStructureBarrier()
 {
 	auto barrier = vk::MemoryBarrier2{};
@@ -560,6 +565,10 @@ void CommandBuffer::AccelerationStructureBarrier()
 	dep.pMemoryBarriers = &barrier;
 
 	m_impl->commandBuffer.pipelineBarrier2(dep);
+}
+
+void CommandBuffer::BuildAccelerationStructure(const core::gpu::AccelerationStructure& _accelerationStructure)
+{
 }
 
 void CommandBuffer::TraceRays(const Device& _device, 

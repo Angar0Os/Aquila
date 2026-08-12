@@ -21,14 +21,17 @@ int main(int argc, char** argv)
 	auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
 
 	auto mesh = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/sphere.glb");
+	glm::mat4 transform;
+	renderer->PushMesh(mesh.get(), transform);
 
 	while (!window->ShouldClose())
 	{
+		auto image = gpu->AcquireNextImage();
+
 		window->PollEvents();
 
-		renderer->Render(*gpu->AcquireCommandBuffer(), *gpu->AcquireNextImage());
+		renderer->Render(gpu->AcquireCommandBuffer(), *image);
 
-		gpu->AcquireNextImage();
 		gpu->Present();
 	}
 

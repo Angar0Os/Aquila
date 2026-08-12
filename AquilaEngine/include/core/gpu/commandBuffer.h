@@ -72,7 +72,10 @@ namespace core::gpu
 
 		void PushConstants(const Pipeline& _pipeline, uint32_t _stageFlags, uint32_t _offset, uint32_t _size, const void* _pValues);
 
+		void DrawIndexed(uint32_t _indexCount, uint32_t _instanceCount, uint32_t _firstIndex, uint32_t _vertexOffset, uint32_t _firstInstance) const;
+
 		void AccelerationStructureBarrier();
+		void BuildAccelerationStructure(const core::gpu::AccelerationStructure& _accelerationStructure);
 
 		void TraceRays(const Device& _device,
 			void* _raygenSBT, uint32_t _raygenOffset, uint32_t _raygenStride,

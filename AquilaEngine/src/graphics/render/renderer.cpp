@@ -14,6 +14,7 @@
 
 #include <loaders/shaderLoader.h>
 
+#include <iostream>
 
 using namespace graphics::render;
 
@@ -69,6 +70,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 {
+	// TODO : Passer le pipeline en compute.
 	auto shaderCode = loaders::ReadFile("assets/shaders/lighting.spv");
 
 	core::gpu::PipelineCreateInfo pipelineInfo{};
@@ -76,6 +78,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 		{core::gpu::utils::EShaderStageFlags::Vertex,   shaderCode, "vertMain"},
 		{core::gpu::utils::EShaderStageFlags::Fragment, shaderCode, "fragMain"}
 	};
+	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Graphics;
 	pipelineInfo.vertexBindings = {};
 	pipelineInfo.vertexAttributes = {};
 	pipelineInfo.topology = core::gpu::utils::EPrimitiveTopology::TriangleList;
@@ -330,32 +333,46 @@ Renderer::Renderer(const core::gpu::Device& _device)
 
 Renderer::~Renderer() = default;
 
-void Renderer::Render(core::gpu::CommandBuffer& _cmdBuf, core::gpu::Image& _outputImage)
+void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outputImage)
 {
 	//m_device.BeginFrame(); // TODO : Note, this might cause an issue in the future with semaphore alignment.
+	m_tlasPerFrame.resize(m_device.FRAMES_IN_FLIGHT);
 
-	//BuildTLAS();
-	//RebuildAccelerationStructures();
-	//UpdateUniformBuffer(m_currentFrame);
+	BuildTLAS();
+	RebuildAccelerationStructures();
+	UpdateUniformBuffers();
 
-	_cmdBuf.Record([&]() {
-		DrawGBuffer(_cmdBuf);
-		//DrawLighting(_cmdBuf);
+	_cmdBuf->Record([&]() {
+		DrawGBuffer(*_cmdBuf);
+		DrawLighting(*_cmdBuf);
 
-		_cmdBuf.TransitionImageLayout(
+		_cmdBuf->TransitionImageLayout(
 			_outputImage,
 			core::gpu::utils::EImageLayout::Undefined,
 			core::gpu::utils::EImageLayout::TransferDst,
 			false
 		);
 
-		_cmdBuf.TransitionImageLayout(
+		_cmdBuf->TransitionImageLayout(
 			_outputImage,
 			core::gpu::utils::EImageLayout::TransferDst,
 			core::gpu::utils::EImageLayout::Present,
 			false
 		);
-	});
+		});
+
+	m_device.ReleaseCommandBuffer(_cmdBuf);
+}
+
+void Renderer::PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform)
+{
+	if (!_mesh) return;
+	if (!_mesh->blas)
+	{
+		std::cerr << "Warning : Mesh pushed without BLAS !" << std::endl;
+	}
+
+	m_meshInstances.push_back({ _mesh, _transform });
 }
 
 void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
@@ -484,4 +501,137 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 		core::gpu::utils::EImageLayout::ShaderReadOnly, 
 		true
 	);
+}
+
+void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
+{
+	std::vector<ColorAttachmentDesc> lightColorDescs;
+
+	for (const auto& colorAttachment : lightingColorAttachments)
+	{
+		ColorAttachmentDesc desc{};
+		desc.image = colorAttachment.image.get();
+		desc.clear = true;
+		lightColorDescs.push_back(desc);
+	}
+
+	DepthAttachmentDesc lightDepthDesc
+	{
+		.image		= nullptr,
+		.clear		= true,
+		.clearDepth = 1.0f
+	};
+
+	_cmdBuf.TransitionImageLayout(
+		*lightingColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::Undefined,
+		core::gpu::utils::EImageLayout::ColorAttachment,
+		false
+	);
+
+	core::gpu::CommandBuffer::RenderingAttachmentInfo colorInfos
+	{
+		.image	= lightingColorAttachments[0].image.get(),
+		.clear	= true,
+		.clearR = 0.0f,
+		.clearG = 0.0f,
+		.clearB = 0.0f,
+		.clearA = 1.0
+	};
+
+	_cmdBuf.BeginRendering(m_device, { colorInfos }, {});
+	_cmdBuf.Bind<core::gpu::Pipeline>(*m_lightingPipeline);
+	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
+	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
+	_cmdBuf.DrawIndexed(3, 1, 0, 0, 0); 
+	_cmdBuf.EndRendering();
+
+	_cmdBuf.TransitionImageLayout(
+		*lightingColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::ColorAttachment,
+		core::gpu::utils::EImageLayout::ShaderReadOnly,
+		false
+	);
+}
+
+void Renderer::UpdateUniformBuffers()
+{
+	UniformBufferObject ubo
+	{
+		.view = m_viewMatrix,
+		.proj = m_projMatrix,
+		.viewProjInverse = glm::inverse(m_projMatrix * m_viewMatrix),
+		.prevViewProj = m_prevViewProj,
+		.prevViewProjInverse = glm::inverse(m_prevViewProj),
+		.viewPos = glm::vec4(m_cameraPosition, 1.0f),
+		.frameCount = m_device.currentFrame
+	};
+
+	uniformBuffers[m_device.currentFrame]->CopyFrom(&ubo, sizeof(UniformBufferObject));
+}
+
+void Renderer::BuildTLAS()
+{
+	if (m_meshInstances.empty()) return;
+
+	std::vector<core::gpu::AccelerationStructureInstance> instances;
+	instances.reserve(m_meshInstances.size());
+
+
+	uint32_t instanceIndex = 0;
+	for (const auto& meshInstance : m_meshInstances)
+	{
+		if (!meshInstance.first->blas)
+		{
+			std::cerr << "Warning: BLAS not found for mesh instance!\n";
+			continue;
+		}
+
+		const glm::mat4& mat = meshInstance.second;
+		float transform[3][4] = {
+			{mat[0][0], mat[1][0], mat[2][0], mat[3][0]},
+			{mat[0][1], mat[1][1], mat[2][1], mat[3][1]},
+			{mat[0][2], mat[1][2], mat[2][2], mat[3][2]}
+		};
+
+		core::gpu::AccelerationStructureInstance instance{};
+		std::memcpy(&instance.transform, &transform, sizeof(transform));
+		instance.instanceCustomIndex = instanceIndex++;
+		instance.mask = 0xFF;
+		instance.instanceShaderBindingTableRecordOffset = 0;
+		instance.blas = meshInstance.first->blas.get();
+
+		if (meshInstance.first->blas->GetDeviceAddress(m_device) == 0)
+		{
+			std::cerr << "ERROR: BLAS has invalid device address!\n";
+			continue;
+		}
+
+		instances.push_back(instance);
+	}
+
+	if (instances.empty()) return;
+
+	core::gpu::AccelerationStructureCreateInfo tlasInfo{};
+	tlasInfo.type = core::gpu::utils::EAccelerationStructureType::TopLevel;
+	tlasInfo.instances = instances;
+	tlasInfo.preferFastTrace = true;
+	tlasInfo.allowUpdate = false;
+
+	m_tlasPerFrame[m_device.currentFrame] = std::make_unique<core::gpu::AccelerationStructure>(m_device, tlasInfo);
+}
+
+void Renderer::RebuildAccelerationStructures()
+{
+	if (m_device.currentFrame >= m_tlasPerFrame.size()) return;
+	if (!m_tlasPerFrame[m_device.currentFrame]) return;
+
+	auto commandBuffer = m_device.AcquireCommandBuffer();
+
+	commandBuffer->Record([&]() {
+		m_tlasPerFrame[m_device.currentFrame]->Build(m_device);
+	});
+	commandBuffer->Submit(m_device, true);
+
+	m_device.ReleaseCommandBuffer(commandBuffer);
 }
