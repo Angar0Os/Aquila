@@ -279,8 +279,6 @@ void Renderer::CreateMaterialLayout()
 
 void Renderer::CreateDescriptorSets()
 {
-	auto cmdBuf = m_device.AcquireCommandBuffer();
-
 	gBufferDescriptorSets.clear();
 	lightingDescriptorSets.clear();
 
@@ -302,9 +300,6 @@ void Renderer::CreateDescriptorSets()
 		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
 	}
-
-	cmdBuf->Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
-	cmdBuf->Bind(*lightingDescriptorSets[m_device.currentFrame], *m_lightingPipeline, 0u);
 }
 
 void Renderer::UpdateDescriptorSets()
@@ -434,6 +429,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 
 	_cmdBuf.BeginRendering(m_device, colorInfos, depthInfo);
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_gBufferPipeline);
+	_cmdBuf.Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
 	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 
@@ -485,6 +481,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 	}
 
 	_cmdBuf.EndRendering();
+
 	for (auto& colorAttachment : gBufferColorAttachments)
 	{
 		_cmdBuf.TransitionImageLayout(
@@ -541,6 +538,7 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 
 	_cmdBuf.BeginRendering(m_device, { colorInfos }, {});
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_lightingPipeline);
+	_cmdBuf.Bind(*lightingDescriptorSets[m_device.currentFrame], *m_lightingPipeline, 0u);
 	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 	_cmdBuf.DrawIndexed(3, 1, 0, 0, 0); 

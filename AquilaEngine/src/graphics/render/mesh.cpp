@@ -63,7 +63,7 @@ void Mesh::CreateBuffers()
 
 	core::gpu::BufferCreateInfo indexInfo {
 		.size				= indicesBufferSize,
-		.usage				= core::gpu::utils::EBufferUsage::VertexBuffer | core::gpu::utils::EBufferUsage::TransferDst,
+		.usage				= core::gpu::utils::EBufferUsage::IndexBuffer | core::gpu::utils::EBufferUsage::TransferDst,
 		.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal
 	};
 	indexBuffer = std::make_unique<core::gpu::Buffer>(device, indexInfo);

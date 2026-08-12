@@ -9,11 +9,11 @@ namespace core::gpu
 {
 	struct CommandBuffer::Impl
 	{
-		vk::raii::CommandBuffer commandBuffer	= nullptr;
-		vk::raii::Semaphore		semaphore		= nullptr;
-		vk::raii::Fence			isGpuFree		= nullptr;
-		bool					isCpuFree		= true;
-		bool					isSingleTime	= false;
+		vk::raii::CommandBuffer commandBuffer		= nullptr;
+		vk::raii::Semaphore		semaphore			= nullptr;
+		vk::raii::Fence			isGpuFree			= nullptr;
+		bool					isCpuFree			= true;
+		bool					isSingleTime		= false;
 		vk::PipelineBindPoint	lastBoundPipeline;
 	};
 

@@ -78,6 +78,9 @@ void CommandBuffer::Submit(const Device& _device, bool _isImmediate) const
 	}
 	else
 	{
+		auto waitResult = _device.GetImpl().device.waitForFences(*frameSync.inFlightFence, VK_TRUE, UINT64_MAX);
+		_device.GetImpl().device.resetFences(*frameSync.inFlightFence);
+
 		vk::SubmitInfo submitInfo{};
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = &waitSemaphore;
@@ -97,13 +100,15 @@ template<>
 void CommandBuffer::Bind<Buffer>(Buffer& _buffer)
 {
 	vk::DeviceSize vkOffset = 0;
-	// TODO : We will need to fix this offset after Evoke.
+	// TODO : We will need to fix this after evoke.
 
-	if (_buffer.GetImpl().usage == utils::EBufferUsage::IndexBuffer)
+	auto usage = _buffer.GetImpl().usage;
+
+	if ((usage & utils::EBufferUsage::IndexBuffer) == utils::EBufferUsage::IndexBuffer)
 	{
 		m_impl->commandBuffer.bindIndexBuffer(_buffer.GetImpl().buffer, vkOffset, vk::IndexType::eUint32);
 	}
-	else if (_buffer.GetImpl().usage == utils::EBufferUsage::VertexBuffer)
+	else if ((usage & utils::EBufferUsage::VertexBuffer) == utils::EBufferUsage::VertexBuffer)
 	{
 		m_impl->commandBuffer.bindVertexBuffers(0, *_buffer.GetImpl().buffer, vkOffset);
 	}
@@ -153,6 +158,7 @@ void CommandBuffer::Bind<Pipeline>(Pipeline& _pipeline)
 			vk::PipelineBindPoint::eRayTracingKHR,
 			vk::Pipeline(_pipeline.GetImpl().pipeline)
 		);
+		m_impl->lastBoundPipeline = vk::PipelineBindPoint::eRayTracingKHR;
 	}
 }
 

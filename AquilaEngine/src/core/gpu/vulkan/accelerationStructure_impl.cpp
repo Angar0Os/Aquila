@@ -325,7 +325,7 @@ void AccelerationStructure::Build(const Device& _device) const
 		commandBuffer->Record([&]() {
 			commandBuffer->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
 			});
-		commandBuffer->Submit(_device, _device.currentFrame);
+		commandBuffer->Submit(_device, true);
 		_device.ReleaseCommandBuffer(commandBuffer);
 	}
 	else
@@ -384,7 +384,7 @@ void AccelerationStructure::Build(const Device& _device) const
 		commandBuffer->Record([&]() {
 			commandBuffer->GetImpl().commandBuffer.buildAccelerationStructuresKHR({ buildInfo }, buildRangePtrs);
 			});
-		commandBuffer->Submit(_device, _device.currentFrame);
+		commandBuffer->Submit(_device, true);
 		_device.ReleaseCommandBuffer(commandBuffer);
 	}
 }
