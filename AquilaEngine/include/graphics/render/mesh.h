@@ -61,6 +61,7 @@ namespace graphics::render
 
 		std::vector<SubMesh>								subMeshes;
 		std::vector<Material*>								materials;
+		std::vector<std::unique_ptr<Material>>				ownedMaterials;
 
 		explicit Mesh(const core::gpu::Device& _device, MeshInstance _instance);
 		~Mesh() noexcept;

@@ -15,6 +15,8 @@
 
 #include <loaders/shaderLoader.h>
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <iostream>
 
 using namespace graphics::render;
@@ -317,12 +319,12 @@ void Renderer::CreateDescriptorSets()
 	{
 		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *lightingDsLayouts[0]);
 		ds->Bind(0, *uniformBuffers[i]);
-		ds->Bind(1, *gBufferColorAttachments[0].texture); 
-		ds->Bind(2, *gBufferColorAttachments[1].texture); 
-		ds->Bind(3, *gBufferDepthAttachment.texture);     
-		ds->Bind(4, *m_fallbackTlas);                     
-		ds->Bind(5, *m_fallbackMaterial->albedoTexture);  
-		ds->Bind(6, *m_fallbackMaterial->albedoTexture);  
+		ds->Bind(1, *gBufferColorAttachments[0].texture);
+		ds->Bind(2, *gBufferColorAttachments[1].texture);
+		ds->Bind(3, *gBufferDepthAttachment.texture);
+		ds->Bind(4, *m_fallbackTlas);
+		ds->Bind(5, *m_fallbackMaterial->albedoTexture);
+		ds->Bind(6, *m_fallbackMaterial->albedoTexture);
 		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
 	}
@@ -353,6 +355,16 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	CreateFallbackTLAS();
 
 	CreateDescriptorSets();
+
+	// TODO (debug) : caméra hardcodée en attendant une vraie caméra pilotée par l'app.
+	// Sans ça, m_viewMatrix / m_projMatrix restent à l'identité (init par défaut de glm::mat4)
+	// et rien n'est visible.
+	m_cameraPosition = glm::vec3(0.0f, 1.0f, 3.0f);
+	m_viewMatrix = glm::lookAt(m_cameraPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	auto [width, height] = m_device.GetSwapchainExtent();
+	m_projMatrix = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
+	m_projMatrix[1][1] *= -1.0f; // Vulkan : NDC Y inversé par rapport à GLM/OpenGL
 }
 
 Renderer::~Renderer() = default;
@@ -365,7 +377,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 	BuildTLAS();
 	RebuildAccelerationStructures();
 	UpdateUniformBuffers();
-	UpdateDescriptorSets(); 
+	UpdateDescriptorSets();
 
 	_cmdBuf->Record([&]() {
 		DrawGBuffer(*_cmdBuf);
@@ -396,7 +408,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 			core::gpu::utils::EImageLayout::Present,
 			false
 		);
-	});
+		});
 
 	_cmdBuf->Submit(m_device, false);
 	m_device.ReleaseCommandBuffer(_cmdBuf);
@@ -587,6 +599,7 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 	_cmdBuf.DrawIndexed(3, 1, 0, 0, 0);
+
 	_cmdBuf.EndRendering();
 
 	_cmdBuf.TransitionImageLayout(

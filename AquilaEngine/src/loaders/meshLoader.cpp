@@ -16,7 +16,103 @@
 
 using namespace loaders;
 
-std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(const core::gpu::Device& _device, const std::string& _path)
+std::pair<std::unique_ptr<core::gpu::Image>, std::unique_ptr<core::gpu::Texture>> s_LoadTexture(
+	const core::gpu::Device& _device,
+	const tinygltf::Model& _model,
+	int _textureIndex,
+	core::gpu::utils::ETextureFormat _format)
+{
+	if (_textureIndex < 0)
+		return { nullptr, nullptr };
+
+	const tinygltf::Texture& tex = _model.textures[_textureIndex];
+	if (tex.source < 0)
+		return { nullptr, nullptr };
+
+	const tinygltf::Image& img = _model.images[tex.source];
+
+	if (img.image.empty())
+	{
+		std::cerr << "GLTF texture has no decoded pixel data: " << img.uri << "\n";
+		return { nullptr, nullptr };
+	}
+
+	const size_t pixelCount = static_cast<size_t>(img.width) * img.height;
+	std::vector<uint8_t> rgba;
+
+	if (img.component == 4)
+	{
+		rgba.assign(img.image.begin(), img.image.end());
+	}
+	else if (img.component == 3)
+	{
+		rgba.resize(pixelCount * 4);
+		for (size_t p = 0; p < pixelCount; ++p)
+		{
+			rgba[p * 4 + 0] = img.image[p * 3 + 0];
+			rgba[p * 4 + 1] = img.image[p * 3 + 1];
+			rgba[p * 4 + 2] = img.image[p * 3 + 2];
+			rgba[p * 4 + 3] = 255;
+		}
+	}
+	else
+	{
+		std::cerr << "Unsupported GLTF image component count (" << img.component << ") for: " << img.uri << "\n";
+		return { nullptr, nullptr };
+	}
+
+	return graphics::render::Material::CreateTexture(
+		_device, rgba.data(),
+		static_cast<uint32_t>(img.width),
+		static_cast<uint32_t>(img.height),
+		_format
+	);
+}
+
+std::unique_ptr<graphics::render::Material> s_LoadMaterial(
+	const core::gpu::Device& _device,
+	const core::gpu::DescriptorSetLayout& _materialLayout,
+	const tinygltf::Model& _model,
+	const tinygltf::Material& _gltfMat)
+{
+	auto mat = std::make_unique<graphics::render::Material>(_device, _materialLayout);
+	mat->name = _gltfMat.name.empty() ? "material" : _gltfMat.name;
+
+	const auto& pbr = _gltfMat.pbrMetallicRoughness;
+
+	mat->albedoColor = glm::vec3(pbr.baseColorFactor[0], pbr.baseColorFactor[1], pbr.baseColorFactor[2]);
+	mat->metalness = static_cast<float>(pbr.metallicFactor);
+	mat->roughnessValue = static_cast<float>(pbr.roughnessFactor);
+
+	mat->SetBaseColor(glm::vec4(mat->albedoColor, static_cast<float>(pbr.baseColorFactor[3])));
+	mat->SetMetalness(mat->metalness);
+	mat->SetRoughness(mat->roughnessValue);
+
+	if (auto [img, tex] = s_LoadTexture(_device, _model, pbr.baseColorTexture.index, core::gpu::utils::ETextureFormat::RGBA8_SRGB); tex)
+	{
+		mat->hasAlbedoTexture = true;
+		mat->SetAlbedo(_device, std::move(img), std::move(tex));
+	}
+
+	if (auto [img, tex] = s_LoadTexture(_device, _model, _gltfMat.normalTexture.index, core::gpu::utils::ETextureFormat::RGBA8_UNorm); tex)
+	{
+		mat->hasNormalTexture = true;
+		mat->SetNormal(_device, std::move(img), std::move(tex));
+	}
+
+	if (auto [img, tex] = s_LoadTexture(_device, _model, pbr.metallicRoughnessTexture.index, core::gpu::utils::ETextureFormat::RGBA8_UNorm); tex)
+	{
+		mat->hasRoughnessMetalTexture = true;
+		mat->SetRoughnessMetal(_device, std::move(img), std::move(tex));
+	}
+
+	return mat;
+}
+
+std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(
+	const core::gpu::Device& _device,
+	const std::string& _path,
+	const core::gpu::DescriptorSetLayout& _materialLayout)
 {
 	std::string ext = std::filesystem::path(_path).extension().string();
 	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
@@ -129,12 +225,9 @@ std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(const core
 				return v;
 			};
 
-		if (!primitiveIndices.empty())
-		{
-			for (auto idx : primitiveIndices)
+		auto addVertex = [&](size_t idx)
 			{
 				graphics::render::Vertex v = buildVertex(idx);
-
 				auto it = uniqueVertices.find(v);
 				uint32_t vertexIndex;
 				if (it == uniqueVertices.end())
@@ -147,31 +240,18 @@ std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(const core
 				{
 					vertexIndex = it->second;
 				}
-
 				instance.indices.push_back(vertexIndex);
-			}
+			};
+
+		if (!primitiveIndices.empty())
+		{
+			for (auto idx : primitiveIndices)
+				addVertex(idx);
 		}
 		else
 		{
 			for (size_t i = 0; i < positions.size() / 3; i++)
-			{
-				graphics::render::Vertex v = buildVertex(i);
-
-				auto it = uniqueVertices.find(v);
-				uint32_t vertexIndex;
-				if (it == uniqueVertices.end())
-				{
-					vertexIndex = static_cast<uint32_t>(instance.vertices.size());
-					uniqueVertices[v] = vertexIndex;
-					instance.vertices.push_back(v);
-				}
-				else
-				{
-					vertexIndex = it->second;
-				}
-
-				instance.indices.push_back(vertexIndex);
-			}
+				addVertex(i);
 		}
 
 		graphics::render::SubMesh submesh;
@@ -184,5 +264,15 @@ std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(const core
 		instance.subMeshes.push_back(submesh);
 	}
 
-	return std::make_unique<graphics::render::Mesh>(_device, instance);
+	auto mesh = std::make_unique<graphics::render::Mesh>(_device, instance);
+
+	mesh->ownedMaterials.reserve(model.materials.size());
+	for (const auto& gltfMat : model.materials)
+		mesh->ownedMaterials.push_back(s_LoadMaterial(_device, _materialLayout, model, gltfMat));
+
+	mesh->materials.reserve(mesh->ownedMaterials.size());
+	for (auto& m : mesh->ownedMaterials)
+		mesh->materials.push_back(m.get());
+
+	return mesh;
 }

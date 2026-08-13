@@ -110,6 +110,68 @@ namespace graphics::render
 			descriptorSet->Update(_device);
 		}
 
+		static std::pair<std::unique_ptr<core::gpu::Image>, std::unique_ptr<core::gpu::Texture>> CreateTexture(
+			const core::gpu::Device& _device,
+			const void* _pixels,
+			uint32_t _width,
+			uint32_t _height,
+			core::gpu::utils::ETextureFormat _format)
+		{
+			core::gpu::ImageCreateInfo imageInfo{};
+			imageInfo.width = _width;
+			imageInfo.height = _height;
+			imageInfo.format = _format;
+			imageInfo.usage = core::gpu::utils::EImageUsage::Sampled | core::gpu::utils::EImageUsage::TransferDst;
+
+			auto image = std::make_unique<core::gpu::Image>(_device, imageInfo);
+
+			const size_t byteSize = static_cast<size_t>(_width) * _height * 4;
+
+			core::gpu::BufferCreateInfo stagingInfo{};
+			stagingInfo.size = byteSize;
+			stagingInfo.usage = core::gpu::utils::EBufferUsage::TransferSrc;
+			stagingInfo.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent;
+
+			auto staging = std::make_unique<core::gpu::Buffer>(_device, stagingInfo);
+			staging->CopyFrom(_pixels, byteSize);
+
+			auto cmdBuf = _device.AcquireCommandBuffer();
+			cmdBuf->Record([&]() {
+				cmdBuf->TransitionImageLayout(*image, core::gpu::utils::EImageLayout::Undefined, core::gpu::utils::EImageLayout::TransferDst, false);
+				cmdBuf->CopyBufferToImage(*staging, *image, _width, _height);
+				cmdBuf->TransitionImageLayout(*image, core::gpu::utils::EImageLayout::TransferDst, core::gpu::utils::EImageLayout::ShaderReadOnly, false);
+				});
+			cmdBuf->Submit(_device, true);
+			_device.ReleaseCommandBuffer(cmdBuf);
+
+			auto texture = std::make_unique<core::gpu::Texture>(_device, *image);
+			return { std::move(image), std::move(texture) };
+		}
+
+		void SetAlbedo(const core::gpu::Device& _device, std::unique_ptr<core::gpu::Image> _image, std::unique_ptr<core::gpu::Texture> _texture)
+		{
+			albedoImage = std::move(_image);
+			albedoTexture = std::move(_texture);
+			descriptorSet->Bind(1, *albedoTexture);
+			descriptorSet->Update(_device);
+		}
+
+		void SetNormal(const core::gpu::Device& _device, std::unique_ptr<core::gpu::Image> _image, std::unique_ptr<core::gpu::Texture> _texture)
+		{
+			normalImage = std::move(_image);
+			normalTexture = std::move(_texture);
+			descriptorSet->Bind(2, *normalTexture);
+			descriptorSet->Update(_device);
+		}
+
+		void SetRoughnessMetal(const core::gpu::Device& _device, std::unique_ptr<core::gpu::Image> _image, std::unique_ptr<core::gpu::Texture> _texture)
+		{
+			roughnessMetalImage = std::move(_image);
+			roughnessMetalTexture = std::move(_texture);
+			descriptorSet->Bind(3, *roughnessMetalTexture);
+			descriptorSet->Update(_device);
+		}
+
 		std::string name = "Default";
 
 		std::unique_ptr<core::gpu::Image>   albedoImage;
