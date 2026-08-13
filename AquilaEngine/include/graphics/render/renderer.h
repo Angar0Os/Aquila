@@ -43,6 +43,12 @@ namespace graphics::render
 		glm::mat4 prevModel;
 	};
 
+	struct ShadowPushConstants
+	{
+		glm::vec3 lightDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
+		float     maxDistance = 1000.0f;
+	};
+
 	struct PassAttachment
 	{
 		std::unique_ptr<core::gpu::Image>   image = nullptr;
@@ -77,13 +83,15 @@ namespace graphics::render
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	lightingDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	iblDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	resolveDsLayouts;
 
 		std::unique_ptr<core::gpu::DescriptorSetLayout>					materialLayout;
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			gBufferDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			lightingDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			resolveDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			shadowDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			iblDescriptorSets;
 
 		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
@@ -91,7 +99,12 @@ namespace graphics::render
 		std::vector<PassAttachment>										gBufferColorAttachments;
 		PassAttachment													gBufferDepthAttachment;
 
-		std::vector<PassAttachment>										lightingColorAttachments;
+		std::vector<PassAttachment>										lightingColorAttachments; // TODO : This will be removed soon.
+
+		std::vector<PassAttachment>										resolveColorAttachments;
+
+
+		PassAttachment													shadowMaskAttachment;
 
 		core::gpu::AccelerationStructure* tlas = nullptr;
 	private:
@@ -105,12 +118,16 @@ namespace graphics::render
 		void LoadEnvironmentMaps();
 
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildShadowPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildIBLPipeline();
-		std::unique_ptr<core::gpu::Pipeline> BuildLightingPipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildGIPipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildResolvePipeline();
 
 		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawShadow(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawIBL(core::gpu::CommandBuffer& _cmdBuf);
-		void DrawLighting(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawGI(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawResolve(core::gpu::CommandBuffer& _cmdBuf);
 
 		void UpdateUniformBuffers();
 		void BuildTLAS();
@@ -119,10 +136,10 @@ namespace graphics::render
 		const core::gpu::Device& m_device;
 
 		std::unique_ptr<core::gpu::Pipeline>		m_gBufferPipeline;
-		std::unique_ptr<core::gpu::Pipeline>		m_lightingPipeline;
-		std::unique_ptr<core::gpu::Pipeline>		m_iblPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_iblPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_resolvePipeline;
 
 		std::unique_ptr<graphics::render::Material> m_fallbackMaterial;
 
@@ -143,6 +160,8 @@ namespace graphics::render
 		glm::mat4														m_viewMatrix;
 		glm::mat4														m_projMatrix;
 		glm::vec3														m_cameraPosition;
+
+		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-1.0f, -0.2f, -0.3f));
 	};
 }
 
