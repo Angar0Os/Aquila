@@ -11,8 +11,10 @@
 #include <core/gpu/utils/enums.h>
 
 #include <glm/glm.hpp>
+#include <stb_image.h>
 
 #include <memory>
+#include <iostream>
 #include <string>
 
 namespace graphics::render
@@ -170,6 +172,55 @@ namespace graphics::render
 			roughnessMetalTexture = std::move(_texture);
 			descriptorSet->Bind(3, *roughnessMetalTexture);
 			descriptorSet->Update(_device);
+		}
+
+		static std::unique_ptr<core::gpu::Image> UploadHDRTexture(const core::gpu::Device& _device, const std::string& _path)
+		{
+			int width, height, channels;
+			float* pixels = stbi_loadf(_path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+			if (!pixels)
+			{
+				std::cerr << "MaterialFactory: failed to load HDR " << _path << "\n";
+				return nullptr;
+			}
+
+			size_t imageSize = static_cast<size_t>(width) * height * 4 * sizeof(float);
+
+			core::gpu::BufferCreateInfo stagingInfo {
+				.size = imageSize,
+				.usage = core::gpu::utils::EBufferUsage::TransferSrc,
+				.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+			};
+
+			auto staging = std::make_unique<core::gpu::Buffer>(_device, stagingInfo);
+			staging->CopyFrom(pixels, imageSize);
+			stbi_image_free(pixels);
+
+			core::gpu::ImageCreateInfo imageInfo {
+				.width				= static_cast<uint32_t>(width),
+				.height				= static_cast<uint32_t>(height),
+				.mipLevels			= 1,
+				.format				= core::gpu::utils::ETextureFormat::RGBA32_Float,
+				.tiling				= core::gpu::utils::EImageTiling::Optimal,
+				.usage				= core::gpu::utils::EImageUsage::TransferDst | core::gpu::utils::EImageUsage::Sampled,
+				.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal,
+				.samples			= core::gpu::utils::ESampleCount::e1
+			};
+			auto image = std::make_unique<core::gpu::Image>(_device, imageInfo);
+
+			auto commandBuffer = _device.AcquireCommandBuffer();
+
+			commandBuffer->Record([&]() {
+				commandBuffer->TransitionImageLayout(*image, core::gpu::utils::EImageLayout::Undefined, core::gpu::utils::EImageLayout::TransferDst, false);
+				commandBuffer->CopyBufferToImage(*staging, *image, width, height);
+				commandBuffer->TransitionImageLayout(*image, core::gpu::utils::EImageLayout::TransferDst, core::gpu::utils::EImageLayout::ShaderReadOnly, false);
+
+			});
+			commandBuffer->Submit(_device, true);
+			_device.ReleaseCommandBuffer(commandBuffer);
+
+			return image;
 		}
 
 		std::string name = "Default";

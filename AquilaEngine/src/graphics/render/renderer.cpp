@@ -102,6 +102,99 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildLightingPipeline()
 	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
 }
 
+std::unique_ptr<core::gpu::Pipeline> Renderer::BuildIBLPipeline()
+{
+	auto shaderCode = loaders::ReadFile("assets/shaders/ibl.spv");
+
+	core::gpu::PipelineCreateInfo pipelineInfo{};
+	pipelineInfo.shaderStages = {
+		{ core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" }
+	};
+	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Compute;
+	pipelineInfo.descriptorSetLayouts = { iblDsLayouts[0].get() };
+
+	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
+}
+
+void Renderer::LoadEnvironmentMaps()
+{
+	m_envMap.image = graphics::render::Material::UploadHDRTexture(m_device, "assets/textures/skyboxes/citrus_1k.hdr");
+	m_envMap.texture = std::make_unique<core::gpu::Texture>(m_device, *m_envMap.image);
+
+	auto shaderCode = loaders::ReadFile("assets/shaders/irradiance_convolution.spv");
+
+	core::gpu::DescriptorSetLayoutBinding envMapBinding{
+		.binding = 0,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding irradianceOutputBinding{
+		.binding = 1,
+		.descriptorType = core::gpu::utils::EDescriptorType::StorageImage,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	auto convLayout = std::make_unique<core::gpu::DescriptorSetLayout>(
+		m_device,
+		core::gpu::DescriptorSetLayoutCreateInfo{ .bindings = { envMapBinding, irradianceOutputBinding } }
+	);
+
+	core::gpu::PipelineCreateInfo convPipelineInfo{};
+	convPipelineInfo.shaderStages = { { core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" } };
+	convPipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Compute;
+	convPipelineInfo.descriptorSetLayouts = { convLayout.get() };
+
+	auto convPipeline = std::make_unique<core::gpu::Pipeline>(m_device, convPipelineInfo);
+
+	core::gpu::ImageCreateInfo irradianceInfo{
+		.width = 128,
+		.height = 64,
+		.mipLevels = 1,
+		.format = core::gpu::utils::ETextureFormat::RGBA32_Float,
+		.tiling = core::gpu::utils::EImageTiling::Optimal,
+		.usage = core::gpu::utils::EImageUsage::Sampled | core::gpu::utils::EImageUsage::Storage,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples = core::gpu::utils::ESampleCount::e1
+	};
+	m_irradianceMap.image = std::make_unique<core::gpu::Image>(m_device, irradianceInfo);
+
+	auto convDs = std::make_unique<core::gpu::DescriptorSet>(m_device, *convLayout);
+	convDs->Bind(0, *m_envMap.texture);
+	convDs->Bind(1, *m_irradianceMap.image);
+	convDs->Update(m_device);
+
+	auto commandBuffer = m_device.AcquireCommandBuffer();
+	commandBuffer->Record([&]() {
+		commandBuffer->TransitionImageLayout(
+			*m_envMap.image,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::ShaderReadOnly,
+			false
+		);
+		commandBuffer->TransitionImageLayout(
+			*m_irradianceMap.image,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::General,
+			false
+		);
+
+		commandBuffer->Bind<core::gpu::Pipeline>(*convPipeline);
+		commandBuffer->Bind(*convDs, *convPipeline, 0u);
+		commandBuffer->Dispatch(128 / 16, 64 / 16, 1);
+
+		commandBuffer->TransitionImageLayout(
+			*m_irradianceMap.image,
+			core::gpu::utils::EImageLayout::General,
+			core::gpu::utils::EImageLayout::ShaderReadOnly,
+			false
+		);
+		});
+	commandBuffer->Submit(m_device, true);
+	m_device.ReleaseCommandBuffer(commandBuffer);
+
+	m_irradianceMap.texture = std::make_unique<core::gpu::Texture>(m_device, *m_irradianceMap.image);
+}
+
 void Renderer::CreateUniformBuffers()
 {
 	uniformBuffers.clear();
@@ -172,7 +265,7 @@ void Renderer::CreateAttachments()
 		.mipLevels = 1,
 		.format = core::gpu::utils::ETextureFormat::RGBA8_SRGB,
 		.tiling = core::gpu::utils::EImageTiling::Optimal,
-		.usage = core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::TransferSrc | core::gpu::utils::EImageUsage::Sampled,
+		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::ColorAttachment | core::gpu::utils::EImageUsage::TransferSrc | core::gpu::utils::EImageUsage::Sampled,
 		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
 		.samples = core::gpu::utils::ESampleCount::e1
 	};
@@ -240,6 +333,55 @@ void Renderer::CreateDescriptorSetLayout()
 
 	lightingDsLayouts.clear();
 	lightingDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(m_device, layoutInfo));
+
+	core::gpu::DescriptorSetLayoutBinding iblUboBinding{
+		.binding = 0,
+		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblAlbedoBinding{
+		.binding = 1,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblNormalBinding{
+		.binding = 2,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblDepthBinding{
+		.binding = 3,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblTlasBinding{
+		.binding = 4,
+		.descriptorType = core::gpu::utils::EDescriptorType::AccelerationStructure,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblEnvMapBinding{
+		.binding = 5,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblIrradianceBinding{
+		.binding = 6,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding iblOutputBinding{
+		.binding = 7,
+		.descriptorType = core::gpu::utils::EDescriptorType::StorageImage,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	core::gpu::DescriptorSetLayoutCreateInfo iblLayoutInfo{
+		.bindings = { iblUboBinding, iblAlbedoBinding, iblNormalBinding, iblDepthBinding,
+					  iblTlasBinding, iblEnvMapBinding, iblIrradianceBinding, iblOutputBinding }
+	};
+
+	iblDsLayouts.clear();
+	iblDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(m_device, iblLayoutInfo));
 }
 
 void Renderer::CreateMaterialLayout()
@@ -323,10 +465,28 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(2, *gBufferColorAttachments[1].texture);
 		ds->Bind(3, *gBufferDepthAttachment.texture);
 		ds->Bind(4, *m_fallbackTlas);
-		ds->Bind(5, *m_fallbackMaterial->albedoTexture);
-		ds->Bind(6, *m_fallbackMaterial->albedoTexture);
+		ds->Bind(5, *m_envMap.texture);
+		ds->Bind(6, *m_irradianceMap.texture);
 		ds->Update(m_device);
 		lightingDescriptorSets.push_back(std::move(ds));
+	}
+
+	iblDescriptorSets.clear();
+	iblDescriptorSets.reserve(m_device.FRAMES_IN_FLIGHT);
+
+	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
+	{
+		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *iblDsLayouts[0]);
+		ds->Bind(0, *uniformBuffers[i]);
+		ds->Bind(1, *gBufferColorAttachments[0].texture);
+		ds->Bind(2, *gBufferColorAttachments[1].texture);
+		ds->Bind(3, *gBufferDepthAttachment.texture);
+		ds->Bind(4, *m_fallbackTlas);
+		ds->Bind(5, *m_envMap.texture);
+		ds->Bind(6, *m_irradianceMap.texture);
+		ds->Bind(7, *lightingColorAttachments[0].image); 
+		ds->Update(m_device);
+		iblDescriptorSets.push_back(std::move(ds));
 	}
 }
 
@@ -337,18 +497,23 @@ void Renderer::UpdateDescriptorSets()
 
 	lightingDescriptorSets[m_device.currentFrame]->Bind(4, *currentTlas);
 	lightingDescriptorSets[m_device.currentFrame]->Update(m_device);
+
+	iblDescriptorSets[m_device.currentFrame]->Bind(4, *currentTlas);
+	iblDescriptorSets[m_device.currentFrame]->Update(m_device);
 }
 
 Renderer::Renderer(const core::gpu::Device& _device)
 	: m_device(_device)
 {
 	CreateUniformBuffers();
+	LoadEnvironmentMaps();
 
 	CreateAttachments();
 	CreateDescriptorSetLayout();
 	CreateMaterialLayout();
 
 	m_gBufferPipeline = BuildGBufferPipeline();
+	m_iblPipeline = BuildIBLPipeline();
 	m_lightingPipeline = BuildLightingPipeline();
 
 	m_fallbackMaterial = std::make_unique<graphics::render::Material>(m_device, *materialLayout);
@@ -356,15 +521,12 @@ Renderer::Renderer(const core::gpu::Device& _device)
 
 	CreateDescriptorSets();
 
-	// TODO (debug) : caméra hardcodée en attendant une vraie caméra pilotée par l'app.
-	// Sans ça, m_viewMatrix / m_projMatrix restent à l'identité (init par défaut de glm::mat4)
-	// et rien n'est visible.
 	m_cameraPosition = glm::vec3(0.0f, 1.0f, 3.0f);
 	m_viewMatrix = glm::lookAt(m_cameraPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
 	auto [width, height] = m_device.GetSwapchainExtent();
 	m_projMatrix = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
-	m_projMatrix[1][1] *= -1.0f; // Vulkan : NDC Y inversé par rapport à GLM/OpenGL
+	m_projMatrix[1][1] *= -1.0f;
 }
 
 Renderer::~Renderer() = default;
@@ -381,7 +543,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 
 	_cmdBuf->Record([&]() {
 		DrawGBuffer(*_cmdBuf);
-		DrawLighting(*_cmdBuf);
+		DrawIBL(*_cmdBuf);
 
 		_cmdBuf->TransitionImageLayout(
 			*lightingColorAttachments[0].image,
@@ -605,6 +767,30 @@ void Renderer::DrawLighting(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.TransitionImageLayout(
 		*lightingColorAttachments[0].image,
 		core::gpu::utils::EImageLayout::ColorAttachment,
+		core::gpu::utils::EImageLayout::ShaderReadOnly,
+		false
+	);
+}
+
+void Renderer::DrawIBL(core::gpu::CommandBuffer& _cmdBuf)
+{
+	auto [width, height] = m_device.GetSwapchainExtent();
+
+	_cmdBuf.TransitionImageLayout(
+		*lightingColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::Undefined,
+		core::gpu::utils::EImageLayout::General,
+		false
+	);
+
+	_cmdBuf.Bind<core::gpu::Pipeline>(*m_iblPipeline);
+	_cmdBuf.Bind(*iblDescriptorSets[m_device.currentFrame], *m_iblPipeline, 0u);
+
+	_cmdBuf.Dispatch((width + 15) / 16, (height + 15) / 16, 1);
+
+	_cmdBuf.TransitionImageLayout(
+		*lightingColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::General,
 		core::gpu::utils::EImageLayout::ShaderReadOnly,
 		false
 	);

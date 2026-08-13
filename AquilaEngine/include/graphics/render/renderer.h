@@ -78,11 +78,13 @@ namespace graphics::render
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	lightingDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	iblDsLayouts;
 
 		std::unique_ptr<core::gpu::DescriptorSetLayout>					materialLayout;
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			gBufferDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			lightingDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			iblDescriptorSets;
 
 		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
 
@@ -100,11 +102,14 @@ namespace graphics::render
 		void CreateAttachments();
 		void CreateDescriptorSetLayout();
 		void CreateMaterialLayout();
+		void LoadEnvironmentMaps();
 
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildIBLPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildLightingPipeline();
 
 		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawIBL(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawLighting(core::gpu::CommandBuffer& _cmdBuf);
 
 		void UpdateUniformBuffers();
@@ -115,10 +120,15 @@ namespace graphics::render
 
 		std::unique_ptr<core::gpu::Pipeline>		m_gBufferPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_lightingPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_iblPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 
 		std::unique_ptr<graphics::render::Material> m_fallbackMaterial;
+
+		PassAttachment								m_envMap;
+		PassAttachment								m_irradianceMap;
+
 		std::vector<std::pair<Mesh*, glm::mat4>>	m_meshInstances;
 		std::unordered_map<Mesh*, glm::mat4>		m_prevMeshInstances[core::gpu::Device::FRAMES_IN_FLIGHT];
 
@@ -128,7 +138,7 @@ namespace graphics::render
 
 		std::vector<std::unique_ptr<core::gpu::AccelerationStructure>>	m_tlasPerFrame;
 		std::vector<LightData>											m_lights;
-		
+
 		glm::mat4														m_prevViewProj = glm::mat4(1.0f);
 		glm::mat4														m_viewMatrix;
 		glm::mat4														m_projMatrix;

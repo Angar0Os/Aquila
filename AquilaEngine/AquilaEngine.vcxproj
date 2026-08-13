@@ -242,6 +242,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\assets\shaders\gbuffer.slang" />
+    <None Include="..\bin\assets\shaders\ibl.slang" />
+    <None Include="..\bin\assets\shaders\irradiance_convolution.slang" />
     <None Include="..\bin\assets\shaders\lighting.slang" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
