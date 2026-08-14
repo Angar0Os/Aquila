@@ -141,6 +141,8 @@ std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(
 	if (gltfMesh.primitives.empty())
 		throw std::runtime_error("GLTF mesh contains no primitives");
 
+	std::cout << "Model has " << model.meshes.size() << " meshes total\n";
+
 	std::cout << "Loading GLTF mesh '" << gltfMesh.name
 		<< "' with " << gltfMesh.primitives.size() << " primitives\n";
 

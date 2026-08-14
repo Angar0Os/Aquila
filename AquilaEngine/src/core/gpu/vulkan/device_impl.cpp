@@ -120,7 +120,7 @@ Device::Device(const Window& _wnd)
 	m_impl->CreateSyncObjects();
 }
 
-Device::~Device() 
+Device::~Device()
 {
 	m_impl->device.waitIdle();
 }
@@ -305,6 +305,9 @@ void Device::Impl::PickPhysicalDevice()
 		bool accelStruct = rtFeatures.template get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>().accelerationStructure;
 		bool rtPipeline = rtFeatures.template get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>().rayTracingPipeline;
 		bool rayQuery = rtFeatures.template get<vk::PhysicalDeviceRayQueryFeaturesKHR>().rayQuery;
+
+		if (!bufferAddr || !accelStruct || !rayQuery)
+			continue;
 
 		if (props.deviceType == vk::PhysicalDeviceType::eDiscreteGpu)
 			score += 1000;
@@ -646,11 +649,11 @@ CommandBuffer* Device::AcquireCommandBuffer() const
 	return cbPtr;
 }
 
-void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer) const 
+void Device::ReleaseCommandBuffer(CommandBuffer*& commandBuffer) const
 {
 	if (m_impl->commandBuffers.contains(commandBuffer))
 	{
-		commandBuffer->GetImpl().isCpuFree = true; 
+		commandBuffer->GetImpl().isCpuFree = true;
 	}
 
 	commandBuffer = nullptr;

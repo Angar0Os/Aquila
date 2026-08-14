@@ -55,7 +55,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 	pipelineInfo.vertexAttributes = vertexAttributes;
 	pipelineInfo.topology = core::gpu::utils::EPrimitiveTopology::TriangleList;
 	pipelineInfo.polygonMode = core::gpu::utils::EPolygonMode::Fill;
-	pipelineInfo.cullMode = core::gpu::utils::ECullMode::Back;
+	pipelineInfo.cullMode = core::gpu::utils::ECullMode::None; // TODO : Switch to Back once GI is up.
 	pipelineInfo.frontFace = core::gpu::utils::EFrontFace::Clockwise;
 	pipelineInfo.depthTestEnable = true;
 	pipelineInfo.depthWriteEnable = true;
@@ -265,7 +265,7 @@ void Renderer::CreateAttachments()
 		.width = width,
 		.height = height,
 		.mipLevels = 1,
-		.format = core::gpu::utils::ETextureFormat::R32_Float, 
+		.format = core::gpu::utils::ETextureFormat::R32_Float,
 		.tiling = core::gpu::utils::EImageTiling::Optimal,
 		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::Sampled,
 		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
@@ -497,7 +497,7 @@ void Renderer::CreateDescriptorSets()
 		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *shadowDsLayouts[0]);
 		ds->Bind(0, *uniformBuffers[i]);
 		ds->Bind(1, *gBufferDepthAttachment.texture);
-		ds->Bind(2, *gBufferColorAttachments[1].texture); 
+		ds->Bind(2, *gBufferColorAttachments[1].texture);
 		ds->Bind(3, *m_fallbackTlas);
 		ds->Bind(4, *shadowMaskAttachment.image);
 		ds->Update(m_device);
@@ -546,7 +546,7 @@ void Renderer::UpdateDescriptorSets()
 	iblDescriptorSets[m_device.currentFrame]->Bind(4, *currentTlas);
 	iblDescriptorSets[m_device.currentFrame]->Update(m_device);
 
-	shadowDescriptorSets[m_device.currentFrame]->Bind(3, *currentTlas);  
+	shadowDescriptorSets[m_device.currentFrame]->Bind(3, *currentTlas);
 	shadowDescriptorSets[m_device.currentFrame]->Update(m_device);
 }
 
@@ -570,8 +570,13 @@ Renderer::Renderer(const core::gpu::Device& _device)
 
 	CreateDescriptorSets();
 
-	m_cameraPosition = glm::vec3(0.0f, 1.0f, 3.0f);
-	m_viewMatrix = glm::lookAt(m_cameraPosition, glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	m_cameraPosition = glm::vec3(1.0f, 1.0f, 3.0f);
+
+	m_viewMatrix = glm::lookAt(
+		m_cameraPosition,
+		glm::vec3(0.5f, 0.35f, 2.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f)
+	);
 
 	auto [width, height] = m_device.GetSwapchainExtent();
 	m_projMatrix = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
@@ -610,7 +615,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 			core::gpu::utils::EImageLayout::Present,
 			false
 		);
-	});
+		});
 
 	_cmdBuf->Submit(m_device, false);
 	m_device.ReleaseCommandBuffer(_cmdBuf);
@@ -689,7 +694,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.BeginRendering(m_device, colorInfos, depthInfo);
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_gBufferPipeline);
 	_cmdBuf.Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
-	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 0.0f);
+	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 1.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 
 	if (!m_meshInstances.empty())
@@ -773,8 +778,8 @@ void Renderer::DrawShadow(core::gpu::CommandBuffer& _cmdBuf)
 	);
 
 	ShadowPushConstants pc{};
-	pc.lightDirection = -glm::normalize(m_sunDirection); 
-	pc.maxDistance = 1000.0f;
+	pc.lightDirection = -glm::normalize(m_sunDirection);
+	pc.maxDistance = 10000.0f;
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_shadowPipeline);
 	_cmdBuf.Bind(*shadowDescriptorSets[m_device.currentFrame], *m_shadowPipeline, 0u);
@@ -837,7 +842,7 @@ void Renderer::DrawResolve(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.TransitionImageLayout(
 		*resolveColorAttachments[0].image,
 		core::gpu::utils::EImageLayout::General,
-		core::gpu::utils::EImageLayout::TransferSrc,  
+		core::gpu::utils::EImageLayout::TransferSrc,
 		false
 	);
 }

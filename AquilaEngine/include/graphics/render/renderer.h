@@ -161,7 +161,7 @@ namespace graphics::render
 		glm::mat4														m_projMatrix;
 		glm::vec3														m_cameraPosition;
 
-		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-1.0f, -0.2f, -0.3f));
+		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
 	};
 }
 

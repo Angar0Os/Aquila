@@ -25,7 +25,7 @@ cbuffer ShadowPushConstants
 float3 ReconstructPosition(float2 uv, float depth)
 {
     float4 clipPos  = float4(uv * 2.0f - 1.0f, depth, 1.0f);
-    float4 worldPos = mul(viewProjInverse, clipPos);
+    float4 worldPos = mul(viewProjInverse, clipPos); 
     return worldPos.xyz / worldPos.w;
 }
 
@@ -39,7 +39,9 @@ bool TraceOcclusion(float3 origin, float3 direction, float maxDist)
 
     RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
     q.TraceRayInline(tlas, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, ray);
-    q.Proceed();
+
+    while (q.Proceed()) { }
+
     return q.CommittedStatus() != COMMITTED_NOTHING;
 }
 
@@ -63,9 +65,9 @@ void cs_main(uint3 threadId : SV_DispatchThreadID)
     }
 
     float3 worldPos = ReconstructPosition(uv, depth);
-    float3 N        = normalize(normalRough.SampleLevel(uv, 0).xyz * 2.0f - 1.0f);
-
-    float3 origin   = worldPos + N * 0.01f; 
+    float3 N = normalize(normalRough.SampleLevel(uv, 0).xyz * 2.0f - 1.0f);
+   
+    float3 origin = worldPos + N * 0.01f; 
     bool   occluded = TraceOcclusion(origin, lightDirection, maxDistance);
 
     outShadowMask[threadId.xy] = occluded ? 0.0f : 1.0f;

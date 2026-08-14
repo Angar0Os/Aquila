@@ -60,7 +60,7 @@ VSOutput vertMain(VSInput input)
     float4 worldPos4     = mul(model,     float4(input.position, 1.0));
     float4 prevWorldPos4 = mul(prevModel, float4(input.position, 1.0));
 
-    float4 clipPos     = mul(proj, mul(view, worldPos4));
+    float4 clipPos = mul(proj, mul(view, worldPos4));
     float4 prevClipPos = mul(prevViewProj, prevWorldPos4);
 
     o.position    = clipPos;

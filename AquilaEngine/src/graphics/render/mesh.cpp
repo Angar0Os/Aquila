@@ -110,7 +110,7 @@ void Mesh::CreateBLAS()
 		.vertexCount	= static_cast<uint32_t>(instance.vertices.size()),
 		.vertexStride	= sizeof(Vertex),
 		.indexCount		= static_cast<uint32_t>(instance.indices.size()),
-		.triangleCount	= geometry.indexCount / 3,
+		.triangleCount	= static_cast<uint32_t>(instance.indices.size() / 3),
 		.opaque			= true
 	};
 
@@ -123,6 +123,13 @@ void Mesh::CreateBLAS()
 	};
 
 	blas = std::make_unique<core::gpu::AccelerationStructure>(device, blasInfo);
+
+	auto buildCmdBuf = device.AcquireCommandBuffer();
+	buildCmdBuf->Record([&]() {
+		blas->Build(device);
+		});
+	buildCmdBuf->Submit(device, true);
+	device.ReleaseCommandBuffer(buildCmdBuf);
 }
 
 void Mesh::EnsureDefaultSubmesh()

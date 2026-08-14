@@ -76,13 +76,6 @@ namespace core::gpu
 
 		void AccelerationStructureBarrier();
 
-		void TraceRays(const Device& _device,
-			void* _raygenSBT, uint32_t _raygenOffset, uint32_t _raygenStride,
-			void* _missSBT, uint32_t _missOffset, uint32_t _missStride, uint32_t _missCount,
-			void* _hitSBT, uint32_t _hitOffset, uint32_t _hitStride, uint32_t _hitCount,
-			void* _callableSBT, uint32_t _callableOffset, uint32_t _callableStride, uint32_t _callableCount,
-			uint32_t _width, uint32_t _height, uint32_t _depth);
-
 		Impl& GetImpl() const;
 	};
 }
