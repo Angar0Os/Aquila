@@ -84,24 +84,24 @@ namespace graphics::render
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	iblDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	resolveDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	giDsLayouts;
 
 		std::unique_ptr<core::gpu::DescriptorSetLayout>					materialLayout;
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			gBufferDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			resolveDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			shadowDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			iblDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			giDescriptorSets;
 
 		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
 
 		std::vector<PassAttachment>										gBufferColorAttachments;
 		PassAttachment													gBufferDepthAttachment;
 
-		std::vector<PassAttachment>										lightingColorAttachments; // TODO : This will be removed soon.
-
+		std::vector<PassAttachment>										giColorAttachments;
 		std::vector<PassAttachment>										resolveColorAttachments;
+
 
 
 		PassAttachment													shadowMaskAttachment;
@@ -119,13 +119,11 @@ namespace graphics::render
 
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildShadowPipeline();
-		std::unique_ptr<core::gpu::Pipeline> BuildIBLPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildGIPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildResolvePipeline();
 
 		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawShadow(core::gpu::CommandBuffer& _cmdBuf);
-		void DrawIBL(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawGI(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawResolve(core::gpu::CommandBuffer& _cmdBuf);
 
@@ -137,7 +135,6 @@ namespace graphics::render
 
 		std::unique_ptr<core::gpu::Pipeline>		m_gBufferPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
-		std::unique_ptr<core::gpu::Pipeline>		m_iblPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_resolvePipeline;
 
