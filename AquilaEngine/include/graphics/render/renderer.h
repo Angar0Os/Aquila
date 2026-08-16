@@ -49,6 +49,12 @@ namespace graphics::render
 		float     maxDistance = 1000.0f;
 	};
 
+	struct GIPushConstants
+	{
+		uint32_t sampleCount = 8;
+		float    maxDistance = 50.0f;
+	};
+
 	struct PassAttachment
 	{
 		std::unique_ptr<core::gpu::Image>   image = nullptr;
@@ -81,6 +87,7 @@ namespace graphics::render
 
 		void Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outputImage);
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
+		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); } // TODO : This is only to debug GI.
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
@@ -107,6 +114,7 @@ namespace graphics::render
 		PassAttachment													shadowMaskAttachment;
 
 		core::gpu::AccelerationStructure* tlas = nullptr;
+
 	private:
 		void CreateDescriptorSets();
 		void UpdateDescriptorSets();
@@ -116,6 +124,7 @@ namespace graphics::render
 		void CreateDescriptorSetLayout();
 		void CreateMaterialLayout();
 		void LoadEnvironmentMaps();
+
 
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildShadowPipeline();
@@ -159,6 +168,8 @@ namespace graphics::render
 		glm::vec3														m_cameraPosition;
 
 		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
+
+		uint32_t														m_giParity = 0;
 	};
 }
 

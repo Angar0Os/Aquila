@@ -12,6 +12,7 @@
 
 #include <loaders/meshLoader.h>
 
+#include <chrono>
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
 
@@ -40,17 +41,27 @@ int main(int argc, char** argv)
 	);
 	
 
+	auto startTime = std::chrono::steady_clock::now();
+
 	while (!window->ShouldClose())
 	{
 		window->PollEvents();
+
+		float time = std::chrono::duration<float>(std::chrono::steady_clock::now() - startTime).count();
+
+		float angle = time * 0.5f; 
+		glm::vec3 sunDir = glm::normalize(glm::vec3(
+			cos(angle),
+			-0.6f,       
+			sin(angle)
+		));
+		renderer->SetSunDirection(sunDir);
 
 		renderer->PushMesh(viking.get(), transform);
 		renderer->PushMesh(plane.get(), planeTransform);
 
 		auto image = gpu->AcquireNextImage();
-
 		renderer->Render(gpu->AcquireCommandBuffer(), *image);
-
 		gpu->Present();
 	}
 }
