@@ -29,6 +29,9 @@ int main(int argc, char** argv)
 	auto viking = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/DamagedHelmet.glb", *renderer->materialLayout);
 	auto plane = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/plane.glb", *renderer->materialLayout);
 	
+	renderer->SetMeshColor(viking.get(), glm::vec3(0.0f));
+	renderer->SetMeshColor(plane.get(), glm::vec3(0.8f, 0.1f, 0.8f));  
+	
 	glm::mat4 transform = glm::rotate(
 		glm::mat4(1.0f),
 		glm::radians(45.0f),

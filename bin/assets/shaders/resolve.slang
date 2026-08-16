@@ -1,6 +1,13 @@
-struct PushConstants
+[[vk::binding(0, 0)]]
+cbuffer UniformBufferObject
 {
-  
+    float4x4 view;
+    float4x4 proj;
+    float4x4 viewProjInverse;
+    float4x4 prevViewProj;
+    float4x4 prevViewProjInverse;
+    float4 viewPos;
+    uint frameCount;
 };
 
 [[vk::binding(1, 0)]]
@@ -21,8 +28,33 @@ Sampler2D giTex;
 [[vk::binding(6, 0)]]
 Sampler2D depthTex;
 
+[[vk::binding(7, 0)]]
+Sampler2D envMapRaw;
+
 static const float3 sunDir = normalize(float3(-1.0, -0.2, -0.3));
 static const float3 sunColor = float3(1.0, 1.0, 1.0);
+static const float  exposure = 1.0f;
+
+float2 DirectionToEquirectUV(float3 dir)
+{
+    float phi = atan2(dir.z, dir.x);
+    float theta = acos(clamp(dir.y, -1.0f, 1.0f));
+    return float2(phi / (2.0f * 3.14159265f) + 0.5f, theta / 3.14159265f);
+}
+
+float3 ReconstructPosition(float2 uv, float depth)
+{
+    float4 clipPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
+    float4 worldPos = mul(viewProjInverse, clipPos);
+    return worldPos.xyz / worldPos.w;
+}
+
+float3 ACESFilm(float3 color, float exposure)
+{
+    float3 x = exp2(exposure) * color;
+    float a = 2.51f, b = 0.03f, c = 2.43f, d = 0.59f, e = 0.14f;
+    return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
+}
 
 [shader("compute")]
 [numthreads(16, 16, 1)]
@@ -43,7 +75,12 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
 
     if (depth >= 1.0f)
     {
-        outImage[coord] = float4(gi, 1.0);
+        float3 farPos = ReconstructPosition(uv, 1.0f);
+        float3 viewDir = normalize(farPos - viewPos.xyz);
+        float2 envUV = DirectionToEquirectUV(viewDir);
+        float3 skyHdr = envMapRaw.SampleLevel(envUV, 0).rgb;
+        float3 skyLdr = ACESFilm(skyHdr, exposure);
+        outImage[coord] = float4(skyLdr, 1.0);
         return;
     }
 
@@ -54,7 +91,8 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
     float NdotL = max(dot(N, -sunDir), 0.0);
     float3 direct = albedo * sunColor * NdotL * shadow;
 
-    float3 result = direct * gi;
+    float3 hdrResult = direct * gi;
+    float3 ldrResult = ACESFilm(hdrResult, exposure);
 
-    outImage[coord] = float4(result, 1.0);
+    outImage[coord] = float4(ldrResult, 1.0);
 }

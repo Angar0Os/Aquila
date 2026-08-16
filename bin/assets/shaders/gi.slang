@@ -34,11 +34,22 @@ RWTexture2D<float4> gGIOutput;
 [[vk::binding(7, 0)]]
 Sampler2D gGIHistory;
 
+[[vk::binding(8, 0)]]
+StructuredBuffer<float4> gInstanceColors;
+
+[[vk::binding(9, 0)]]
+Sampler2D gEnvironmentRaw;
+
 [[vk::push_constant]]
 cbuffer GIPushConstants
 {
-    uint  sampleCount;
+    uint sampleCount;
     float maxDistance;
+    float2 _pad0;
+    float3 sunDirection;
+    float _pad1;
+    float3 sunColor;
+    float _pad2;
 };
 
 static const float PI = 3.14159265f;
@@ -117,6 +128,64 @@ bool TraceOcclusion(float3 origin, float3 direction, float maxDist)
     return q.CommittedStatus() != COMMITTED_NOTHING;
 }
 
+float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
+{
+    float3 radiance = float3(0.0f, 0.0f, 0.0f);
+    float3 throughput = float3(1.0f, 1.0f, 1.0f);
+
+    float3 rayOrigin = origin;
+    float3 rayDir = direction;
+
+    const uint maxBounces = 16; 
+
+    for (uint bounce = 0; bounce < maxBounces; ++bounce)
+    {
+        RayDesc ray;
+        ray.Origin = rayOrigin;
+        ray.Direction = rayDir;
+        ray.TMin = 0.001f;
+        ray.TMax = maxDistance;
+
+        RayQuery<RAY_FLAG_NONE> q;
+        q.TraceRayInline(gTLAS, RAY_FLAG_NONE, 0xFF, ray);
+        while (q.Proceed()) { q.CommitNonOpaqueTriangleHit(); }
+
+        if (q.CommittedStatus() == COMMITTED_NOTHING)
+        {
+            float2 envUV = DirectionToEquirectUV(rayDir);
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb; 
+            break;
+        }
+
+        float3 hitPos = rayOrigin + rayDir * q.CommittedRayT();
+        
+        float3 hitNormal = normalize(-rayDir);
+        uint hitInstance = q.CommittedInstanceID();
+        float3 approxAlbedo = gInstanceColors[hitInstance].rgb;  
+
+        bool occluded = TraceOcclusion(hitPos + hitNormal * 0.01f, sunDirection, maxDistance);
+        if (!occluded)
+        {
+            float NdotL = max(dot(hitNormal, sunDirection), 0.0f);
+            radiance += throughput * (approxAlbedo / PI) * sunColor * NdotL;
+        }
+
+        float pdf;
+        float3 newDir = SampleHemisphere(hitNormal, seed, pdf);
+        if (pdf <= 0.0f)
+            break;
+
+        float3 brdf = approxAlbedo / PI;
+        float cosTerm = max(dot(hitNormal, newDir), 0.0f);
+        throughput *= (brdf * cosTerm) / pdf;
+
+        rayOrigin = hitPos + hitNormal * 0.01f;
+        rayDir = newDir;
+    }
+
+    return radiance;
+}
+
 [shader("compute")]
 [numthreads(16, 16, 1)]
 void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
@@ -134,11 +203,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     if (depth >= 1.0f)
     {
-        //float3 farPos = ReconstructPosition(uv, 1.0f);
-        //float3 viewDir = normalize(farPos - gGIConstants.viewPos.xyz);
-        //float2 envUV = DirectionToEquirectUV(viewDir);
-        //gGIOutput[pixel] = float4(gEnvironment.SampleLevel(envUV, 0).rgb, 1.0f);
-        gGIOutput[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);   // TODO : This is for debug, we will keep it until gi is good enough.
+        gGIOutput[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);
         return;
     }
 
@@ -156,25 +221,12 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     {
         float pdf;
         float3 wi = SampleHemisphere(N, seed, pdf);
+        if (pdf <= 0.0f) continue;
 
-        if (pdf <= 0.0f)
-            continue;
+        float3 Li = TraceRadiance(origin, wi, seed);
 
-        bool hit = TraceOcclusion(origin, wi, maxDistance);
-
-        float3 Li;
-        if (hit)
-        {
-            Li = float3(0.05f, 0.05f, 0.05f);
-        }
-        else
-        {
-            float2 envUV = DirectionToEquirectUV(wi);
-            Li = gEnvironment.SampleLevel(envUV, 0).rgb;
-        }
-
-        float3 brdf    = albedo / PI;    
-        float  cosTerm = max(dot(N, wi), 0.0f);
+        float3 brdf = albedo / PI;
+        float cosTerm = max(dot(N, wi), 0.0f);
 
         GI += (brdf * Li * cosTerm) / pdf;
     }

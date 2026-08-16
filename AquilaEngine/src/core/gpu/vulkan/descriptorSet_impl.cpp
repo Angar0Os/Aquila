@@ -75,9 +75,21 @@ void core::gpu::DescriptorSet::Bind<core::gpu::Buffer>(uint32_t _binding, const 
 		_buffer.GetImpl().bufferSize
 	);
 
+	vk::DescriptorType descriptorType = vk::DescriptorType::eUniformBuffer;
+
+	auto usage = _buffer.GetImpl().usage;
+	if ((usage & utils::EBufferUsage::StorageBuffer) == utils::EBufferUsage::StorageBuffer)
+	{
+		descriptorType = vk::DescriptorType::eStorageBuffer;
+	}
+	else if ((usage & utils::EBufferUsage::UniformBuffer) == utils::EBufferUsage::UniformBuffer)
+	{
+		descriptorType = vk::DescriptorType::eUniformBuffer;
+	}
+
 	m_impl->bindingInfos.push_back({
 		_binding,
-		vk::DescriptorType::eUniformBuffer,
+		descriptorType,
 		infoIndex
 		});
 }

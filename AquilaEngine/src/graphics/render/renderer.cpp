@@ -219,6 +219,19 @@ void Renderer::CreateUniformBuffers()
 		};
 		uniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
 	}
+
+	instanceColorBuffers.clear();
+	instanceColorBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
+
+	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
+	{
+		core::gpu::BufferCreateInfo bufferInfo{
+			.size = sizeof(glm::vec4) * MAX_INSTANCES,
+			.usage = core::gpu::utils::EBufferUsage::StorageBuffer,
+			.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+		};
+		instanceColorBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
+	}
 }
 
 void Renderer::CreateAttachments()
@@ -431,9 +444,22 @@ void Renderer::CreateDescriptorSetLayout()
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
-	core::gpu::DescriptorSetLayoutCreateInfo giLayoutInfo {
+	core::gpu::DescriptorSetLayoutBinding giInstanceColorsBinding {
+		.binding = 8,
+		.descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	core::gpu::DescriptorSetLayoutBinding giEnvironmentRawBinding{
+	.binding = 9,
+	.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+	.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	core::gpu::DescriptorSetLayoutCreateInfo giLayoutInfo{
 		.bindings = { giUboBinding, giDepthBinding, giNormalBinding, giAlbedoBinding,
-			giTlasBinding, giEnvironmentBinding, giOutputBinding, giHistoryBinding }
+			giTlasBinding, giEnvironmentBinding, giOutputBinding, giHistoryBinding,
+			giInstanceColorsBinding, giEnvironmentRawBinding }
 	};
 
 	giDsLayouts.clear();
@@ -475,12 +501,18 @@ void Renderer::CreateDescriptorSetLayout()
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
+	core::gpu::DescriptorSetLayoutBinding resolveEnvironmentRawBinding{
+		.binding = 7, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
 	resolveDsLayouts.clear();
 	resolveDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(
 		m_device,
-		core::gpu::DescriptorSetLayoutCreateInfo {
+		core::gpu::DescriptorSetLayoutCreateInfo{
 			.bindings = { resolveUboBinding, resolveAlbedoBinding, resolveNormalBinding,
-						  resolveShadowBinding, resolveOutputBinding, resolveGiBinding, resolveDepthBinding }
+						  resolveShadowBinding, resolveOutputBinding, resolveGiBinding,
+						  resolveDepthBinding, resolveEnvironmentRawBinding }
 		}
 	));
 }
@@ -584,6 +616,8 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(5, *m_irradianceMap.texture);
 		ds->Bind(6, *giColorAttachments[0].image);
 		ds->Bind(7, *giColorAttachments[1].texture);
+		ds->Bind(8, *instanceColorBuffers[i]);
+		ds->Bind(9, *m_envMap.texture);
 		ds->Update(m_device);
 
 		giDescriptorSets.push_back(std::move(ds));
@@ -602,7 +636,9 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(4, *resolveColorAttachments[0].image);
 		ds->Bind(5, *giColorAttachments[0].texture);
 		ds->Bind(6, *gBufferDepthAttachment.texture);
+		ds->Bind(7, *m_envMap.texture);   
 		ds->Update(m_device);
+
 		resolveDescriptorSets.push_back(std::move(ds));
 	}
 }
@@ -892,8 +928,10 @@ void Renderer::DrawGI(core::gpu::CommandBuffer& _cmdBuf)
 	);
 
 	GIPushConstants pc{};
-	pc.sampleCount = 8;
+	pc.sampleCount = 16;   
 	pc.maxDistance = 50.0f;
+	pc.sunDirection = -glm::normalize(m_sunDirection);   
+	pc.sunColor = glm::vec3(1.0f);
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_giPipeline);
 	_cmdBuf.Bind(*giDescriptorSets[m_device.currentFrame], *m_giPipeline, 0u);
@@ -960,7 +998,7 @@ void Renderer::BuildTLAS()
 
 	std::vector<core::gpu::AccelerationStructureInstance> instances;
 	instances.reserve(m_meshInstances.size());
-
+	std::vector<glm::vec4> instanceColors(MAX_INSTANCES, glm::vec4(0.6f, 0.6f, 0.6f, 1.0f));
 
 	uint32_t instanceIndex = 0;
 	for (const auto& meshInstance : m_meshInstances)
@@ -991,8 +1029,18 @@ void Renderer::BuildTLAS()
 			continue;
 		}
 
+		if (instanceIndex < MAX_INSTANCES)
+		{
+			auto it = m_meshColors.find(meshInstance.first);
+			glm::vec3 color = (it != m_meshColors.end()) ? it->second : glm::vec3(0.6f);
+			instanceColors[instanceIndex] = glm::vec4(color, 1.0f);
+		}
+
+		instance.instanceCustomIndex = instanceIndex++;
 		instances.push_back(instance);
 	}
+
+	instanceColorBuffers[m_device.currentFrame]->CopyFrom(instanceColors.data(), sizeof(glm::vec4) * MAX_INSTANCES);
 
 	if (instances.empty()) return;
 

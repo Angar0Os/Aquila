@@ -38,7 +38,8 @@ namespace graphics::render
 		float							radius = 0.0f;
 	};
 
-	struct GBufferPushConstants {
+	struct GBufferPushConstants
+	{
 		glm::mat4 model;
 		glm::mat4 prevModel;
 	};
@@ -51,8 +52,13 @@ namespace graphics::render
 
 	struct GIPushConstants
 	{
-		uint32_t sampleCount = 8;
-		float    maxDistance = 50.0f;
+		uint32_t  sampleCount = 8;
+		float     maxDistance = 50.0f;
+		float     _pad0[2] = { 0.0f, 0.0f };
+		glm::vec3 sunDirection = glm::vec3(0.0f, 1.0f, 0.0f);
+		float     _pad1 = 0.0f;
+		glm::vec3 sunColor = glm::vec3(1.0f);
+		float     _pad2 = 0.0f;
 	};
 
 	struct PassAttachment
@@ -87,7 +93,9 @@ namespace graphics::render
 
 		void Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outputImage);
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
+
 		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); } // TODO : This is only to debug GI.
+		void SetMeshColor(graphics::render::Mesh* _mesh, const glm::vec3& _color) { m_meshColors[_mesh] = _color; }
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
@@ -170,7 +178,12 @@ namespace graphics::render
 		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
 
 		uint32_t														m_giParity = 0;
+		std::unordered_map<Mesh*, glm::vec3>							m_meshColors;   
+
+		std::vector<std::unique_ptr<core::gpu::Buffer>> instanceColorBuffers;
+		static constexpr uint32_t MAX_INSTANCES = 256;
 	};
 }
+
 
 #endif //AQUILA_ENGINE_GRAPHICS_RENDER_RENDERER_H
