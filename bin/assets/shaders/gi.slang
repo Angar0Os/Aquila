@@ -134,11 +134,11 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     if (depth >= 1.0f)
     {
-        float3 farPos = ReconstructPosition(uv, 1.0f);
-        float3 viewDir = normalize(farPos - gGIConstants.viewPos.xyz);
-        float2 envUV = DirectionToEquirectUV(viewDir);
-        gGIOutput[pixel] = float4(gEnvironment.SampleLevel(envUV, 0).rgb, 1.0f);
-        // gGIOutput[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);   // TODO : This is for debug, we will keep it until gi is good enough.
+        //float3 farPos = ReconstructPosition(uv, 1.0f);
+        //float3 viewDir = normalize(farPos - gGIConstants.viewPos.xyz);
+        //float2 envUV = DirectionToEquirectUV(viewDir);
+        //gGIOutput[pixel] = float4(gEnvironment.SampleLevel(envUV, 0).rgb, 1.0f);
+        gGIOutput[pixel] = float4(0.0f, 0.0f, 0.0f, 1.0f);   // TODO : This is for debug, we will keep it until gi is good enough.
         return;
     }
 

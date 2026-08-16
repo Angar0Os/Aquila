@@ -243,7 +243,6 @@
   <ItemGroup>
     <None Include="..\bin\assets\shaders\gbuffer.slang" />
     <None Include="..\bin\assets\shaders\gi.slang" />
-    <None Include="..\bin\assets\shaders\ibl.slang" />
     <None Include="..\bin\assets\shaders\irradiance_convolution.slang" />
     <None Include="..\bin\assets\shaders\resolve.slang" />
     <None Include="..\bin\assets\shaders\shadow.slang" />
