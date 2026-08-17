@@ -27,6 +27,8 @@ namespace core::gpu
 		std::pair<uint32_t, uint32_t> GetSwapchainExtent() const;
 		void Present();
 
+		void RequestResize();
+
 		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
 		uint32_t currentFrame = 0;
 

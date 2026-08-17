@@ -241,6 +241,7 @@
     <ClInclude Include="src\core\gpu\vulkan\texture_impl.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\bin\assets\shaders\fxaa.slang" />
     <None Include="..\bin\assets\shaders\gbuffer.slang" />
     <None Include="..\bin\assets\shaders\gi.slang" />
     <None Include="..\bin\assets\shaders\irradiance_convolution.slang" />

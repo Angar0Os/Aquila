@@ -65,6 +65,23 @@ void DescriptorSet::Bind<Image>(uint32_t _binding, const Image& _image)
 		});
 }
 
+void DescriptorSet::BindArray(uint32_t binding, uint32_t arrayElement, const Texture& texture)
+{
+	size_t infoIndex = m_impl->imageInfos.size();
+	m_impl->imageInfos.emplace_back(
+		*texture.GetImpl().sampler,
+		*texture.GetImpl().image->GetImpl().view,
+		vk::ImageLayout::eShaderReadOnlyOptimal
+	);
+
+	m_impl->bindingInfos.push_back({
+		binding,
+		vk::DescriptorType::eCombinedImageSampler,
+		infoIndex,
+		arrayElement 
+		});
+}
+
 template<>
 void core::gpu::DescriptorSet::Bind<core::gpu::Buffer>(uint32_t _binding, const Buffer& _buffer)
 {
@@ -129,7 +146,7 @@ void DescriptorSet::Update(const Device& device)
 		vk::WriteDescriptorSet write{};
 		write.dstSet = m_impl->descriptorSet;
 		write.dstBinding = bindingInfo.binding;
-		write.dstArrayElement = 0;
+		write.dstArrayElement = bindingInfo.arrayElement;
 		write.descriptorCount = 1;
 		write.descriptorType = bindingInfo.type;
 

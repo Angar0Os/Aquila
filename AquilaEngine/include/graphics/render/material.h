@@ -21,7 +21,7 @@ namespace graphics::render
 {
 	// TODO : This class will need a complete rework. Need to learn about PBR and how to manage it properly
 
-	struct MaterialGPUData //have to find a better way to do this , per material domain MaterialGPUData ?
+	struct MaterialGPUData 
 	{
 		glm::vec4 baseColor;
 		// rgb = albedoColor, a = unused
@@ -247,6 +247,11 @@ namespace graphics::render
 		MaterialGPUData gpuData;
 
 		size_t index; // used by materialInstanceManager to remove on destruction
+
+		uint32_t albedoBindlessIndex = 0;         
+		uint32_t normalBindlessIndex = 0;         
+		uint32_t roughMetalBindlessIndex = 0;     
+		uint32_t materialTableIndex = UINT32_MAX; 
 
 		void SetBaseColor(const glm::vec4& color)
 		{

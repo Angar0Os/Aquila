@@ -55,8 +55,8 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 	pipelineInfo.vertexAttributes = vertexAttributes;
 	pipelineInfo.topology = core::gpu::utils::EPrimitiveTopology::TriangleList;
 	pipelineInfo.polygonMode = core::gpu::utils::EPolygonMode::Fill;
-	pipelineInfo.cullMode = core::gpu::utils::ECullMode::None; // TODO : Switch to Back once GI is up.
-	pipelineInfo.frontFace = core::gpu::utils::EFrontFace::Clockwise;
+	pipelineInfo.cullMode = core::gpu::utils::ECullMode::Back;
+	pipelineInfo.frontFace = core::gpu::utils::EFrontFace::CounterClockwise;
 	pipelineInfo.depthTestEnable = true;
 	pipelineInfo.depthWriteEnable = true;
 	pipelineInfo.depthCompareOp = core::gpu::utils::ECompareOp::Less;
@@ -121,6 +121,32 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildResolvePipeline()
 	pipelineInfo.shaderStages = { { core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" } };
 	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Compute;
 	pipelineInfo.descriptorSetLayouts = { resolveDsLayouts[0].get() };
+
+	std::vector<core::gpu::PushConstantRange> pushConstants = {
+		{
+			.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+			.offset = 0, .size = sizeof(ResolvePushConstants)
+		}
+	};
+	pipelineInfo.pushConstantRanges = pushConstants;
+
+	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
+}
+
+std::unique_ptr<core::gpu::Pipeline> Renderer::BuildFXAAPipeline()
+{
+	auto shaderCode = loaders::ReadFile("assets/shaders/fxaa.spv");
+
+	std::vector<core::gpu::PushConstantRange> pushConstants = {
+		{.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+		  .offset = 0, .size = sizeof(FXAAPushConstants) }
+	};
+
+	core::gpu::PipelineCreateInfo pipelineInfo{};
+	pipelineInfo.shaderStages = { { core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" } };
+	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Compute;
+	pipelineInfo.descriptorSetLayouts = { fxaaDsLayouts[0].get() };
+	pipelineInfo.pushConstantRanges = pushConstants;
 
 	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
 }
@@ -220,18 +246,32 @@ void Renderer::CreateUniformBuffers()
 		uniformBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
 	}
 
-	instanceColorBuffers.clear();
-	instanceColorBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
+	lightBuffers.clear();
+	lightBuffers.reserve(m_device.FRAMES_IN_FLIGHT);
 
 	for (size_t i = 0; i < m_device.FRAMES_IN_FLIGHT; i++)
 	{
 		core::gpu::BufferCreateInfo bufferInfo{
-			.size = sizeof(glm::vec4) * MAX_INSTANCES,
+			.size = sizeof(GPULight) * MAX_LIGHTS,
 			.usage = core::gpu::utils::EBufferUsage::StorageBuffer,
 			.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 		};
-		instanceColorBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
+		lightBuffers.push_back(std::make_unique<core::gpu::Buffer>(m_device, bufferInfo));
 	}
+
+	core::gpu::BufferCreateInfo meshTableInfo{
+		.size = sizeof(MeshTableEntry) * MAX_MESHES,
+		.usage = core::gpu::utils::EBufferUsage::StorageBuffer,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+	};
+	m_meshTableBuffer = std::make_unique<core::gpu::Buffer>(m_device, meshTableInfo);
+
+	core::gpu::BufferCreateInfo materialTableInfo{
+		.size = sizeof(GPUMaterial) * MAX_MATERIALS,
+		.usage = core::gpu::utils::EBufferUsage::StorageBuffer,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+	};
+	m_materialTableBuffer = std::make_unique<core::gpu::Buffer>(m_device, materialTableInfo);
 }
 
 void Renderer::CreateAttachments()
@@ -281,7 +321,7 @@ void Renderer::CreateAttachments()
 	gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
 
 
-	core::gpu::ImageCreateInfo shadowInfo 
+	core::gpu::ImageCreateInfo shadowInfo
 	{
 		.width = width,
 		.height = height,
@@ -346,6 +386,22 @@ void Renderer::CreateAttachments()
 	resolveColorAttachments.resize(1);
 	resolveColorAttachments[0].image = std::make_unique<core::gpu::Image>(m_device, resolveInfo);
 	resolveColorAttachments[0].texture = std::make_unique<core::gpu::Texture>(m_device, *resolveColorAttachments[0].image);
+
+	core::gpu::ImageCreateInfo aaInfo
+	{
+		.width = width,
+		.height = height,
+		.mipLevels = 1,
+		.format = core::gpu::utils::ETextureFormat::RGBA16_Float,
+		.tiling = core::gpu::utils::EImageTiling::Optimal,
+		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::Sampled | core::gpu::utils::EImageUsage::TransferSrc,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples = core::gpu::utils::ESampleCount::e1
+	};
+
+	aaColorAttachments.resize(1);
+	aaColorAttachments[0].image = std::make_unique<core::gpu::Image>(m_device, aaInfo);
+	aaColorAttachments[0].texture = std::make_unique<core::gpu::Texture>(m_device, *aaColorAttachments[0].image);
 }
 
 void Renderer::CreateDescriptorSetLayout()
@@ -444,22 +500,35 @@ void Renderer::CreateDescriptorSetLayout()
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
-	core::gpu::DescriptorSetLayoutBinding giInstanceColorsBinding {
-		.binding = 8,
-		.descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
-		.stageFlags = core::gpu::utils::EShaderStage::Compute
-	};
-
 	core::gpu::DescriptorSetLayoutBinding giEnvironmentRawBinding{
 	.binding = 9,
 	.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 	.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
+	core::gpu::DescriptorSetLayoutBinding giMeshTableBinding{
+	.binding = 10, .descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
+	.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding giMaterialTableBinding{
+		.binding = 11, .descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	core::gpu::DescriptorSetLayoutBinding giBindlessTexturesBinding{
+		.binding = 12,
+		.descriptorCount = MAX_BINDLESS_TEXTURES,
+		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute,
+		.partiallyBound = true,
+		.updateAfterBind = true
+	};
+
 	core::gpu::DescriptorSetLayoutCreateInfo giLayoutInfo{
 		.bindings = { giUboBinding, giDepthBinding, giNormalBinding, giAlbedoBinding,
 			giTlasBinding, giEnvironmentBinding, giOutputBinding, giHistoryBinding,
-			giInstanceColorsBinding, giEnvironmentRawBinding }
+			giEnvironmentRawBinding,
+			giMeshTableBinding, giMaterialTableBinding, giBindlessTexturesBinding }
 	};
 
 	giDsLayouts.clear();
@@ -470,28 +539,28 @@ void Renderer::CreateDescriptorSetLayout()
 		)
 	);
 
-	core::gpu::DescriptorSetLayoutBinding resolveUboBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveUboBinding{
 	.binding = 0, .descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
 	.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
-	core::gpu::DescriptorSetLayoutBinding resolveAlbedoBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveAlbedoBinding{
 		.binding = 1, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
-	core::gpu::DescriptorSetLayoutBinding resolveNormalBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveNormalBinding{
 		.binding = 2, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
-	core::gpu::DescriptorSetLayoutBinding resolveShadowBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveShadowBinding{
 		.binding = 3, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
-	core::gpu::DescriptorSetLayoutBinding resolveOutputBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveOutputBinding{
 		.binding = 4, .descriptorType = core::gpu::utils::EDescriptorType::StorageImage,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
-	core::gpu::DescriptorSetLayoutBinding resolveGiBinding {
+	core::gpu::DescriptorSetLayoutBinding resolveGiBinding{
 		.binding = 5, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
@@ -506,38 +575,58 @@ void Renderer::CreateDescriptorSetLayout()
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
 
+	core::gpu::DescriptorSetLayoutBinding resolveLightBufferBinding{
+		.binding = 8, .descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
 	resolveDsLayouts.clear();
 	resolveDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(
 		m_device,
 		core::gpu::DescriptorSetLayoutCreateInfo{
 			.bindings = { resolveUboBinding, resolveAlbedoBinding, resolveNormalBinding,
 						  resolveShadowBinding, resolveOutputBinding, resolveGiBinding,
-						  resolveDepthBinding, resolveEnvironmentRawBinding }
+						  resolveDepthBinding, resolveEnvironmentRawBinding, resolveLightBufferBinding  }
 		}
+	));
+
+	core::gpu::DescriptorSetLayoutBinding fxaaInputBinding {
+		.binding = 0, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding fxaaOutputBinding{
+		.binding = 1, .descriptorType = core::gpu::utils::EDescriptorType::StorageImage,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	fxaaDsLayouts.clear();
+	fxaaDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(
+		m_device,
+		core::gpu::DescriptorSetLayoutCreateInfo{ .bindings = { fxaaInputBinding, fxaaOutputBinding } }
 	));
 }
 
 void Renderer::CreateMaterialLayout()
 {
-	core::gpu::DescriptorSetLayoutBinding materialUBOBinding {
+	core::gpu::DescriptorSetLayoutBinding materialUBOBinding{
 		.binding = 0,
 		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
 		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding albedoBinding {
+	core::gpu::DescriptorSetLayoutBinding albedoBinding{
 		.binding = 1,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding normalBinding {
+	core::gpu::DescriptorSetLayoutBinding normalBinding{
 		.binding = 2,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding roughMetalBinding {
+	core::gpu::DescriptorSetLayoutBinding roughMetalBinding{
 		.binding = 3,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Fragment
@@ -545,7 +634,7 @@ void Renderer::CreateMaterialLayout()
 
 	materialLayout = std::make_unique<core::gpu::DescriptorSetLayout>(
 		m_device,
-		core::gpu::DescriptorSetLayoutCreateInfo {
+		core::gpu::DescriptorSetLayoutCreateInfo{
 			.bindings = { materialUBOBinding, albedoBinding, normalBinding, roughMetalBinding }
 		}
 	);
@@ -616,8 +705,9 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(5, *m_irradianceMap.texture);
 		ds->Bind(6, *giColorAttachments[0].image);
 		ds->Bind(7, *giColorAttachments[1].texture);
-		ds->Bind(8, *instanceColorBuffers[i]);
 		ds->Bind(9, *m_envMap.texture);
+		ds->Bind(10, *m_meshTableBuffer);
+		ds->Bind(11, *m_materialTableBuffer);
 		ds->Update(m_device);
 
 		giDescriptorSets.push_back(std::move(ds));
@@ -636,10 +726,23 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(4, *resolveColorAttachments[0].image);
 		ds->Bind(5, *giColorAttachments[0].texture);
 		ds->Bind(6, *gBufferDepthAttachment.texture);
-		ds->Bind(7, *m_envMap.texture);   
+		ds->Bind(7, *m_envMap.texture);
+		ds->Bind(8, *lightBuffers[i]);
 		ds->Update(m_device);
 
 		resolveDescriptorSets.push_back(std::move(ds));
+	}
+
+	fxaaDescriptorSets.clear();
+	fxaaDescriptorSets.reserve(m_device.FRAMES_IN_FLIGHT);
+
+	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
+	{
+		auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *fxaaDsLayouts[0]);
+		ds->Bind(0, *resolveColorAttachments[0].texture);
+		ds->Bind(1, *aaColorAttachments[0].image);
+		ds->Update(m_device);
+		fxaaDescriptorSets.push_back(std::move(ds));
 	}
 }
 
@@ -680,6 +783,7 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	m_shadowPipeline = BuildShadowPipeline();
 	m_giPipeline = BuildGIPipeline();
 	m_resolvePipeline = BuildResolvePipeline();
+	m_fxaaPipeline = BuildFXAAPipeline();
 
 	m_fallbackMaterial = std::make_unique<graphics::render::Material>(m_device, *materialLayout);
 	CreateFallbackTLAS();
@@ -710,29 +814,32 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 	UpdateUniformBuffers();
 	UpdateDescriptorSets();
 
+	lightBuffers[m_device.currentFrame]->CopyFrom(m_pointLights.data(), sizeof(GPULight) * m_pointLights.size());
+
 	_cmdBuf->Record([&]()
-	{
-		DrawGBuffer(*_cmdBuf);
-		DrawShadow(*_cmdBuf);
-		DrawGI(*_cmdBuf);
-		DrawResolve(*_cmdBuf);
+		{
+			DrawGBuffer(*_cmdBuf);
+			DrawShadow(*_cmdBuf);
+			DrawGI(*_cmdBuf);
+			DrawResolve(*_cmdBuf);
+			DrawFXAA(*_cmdBuf);
 
-		_cmdBuf->TransitionImageLayout(
-			_outputImage,
-			core::gpu::utils::EImageLayout::Undefined,
-			core::gpu::utils::EImageLayout::TransferDst,
-			false
-		);
+			_cmdBuf->TransitionImageLayout(
+				_outputImage,
+				core::gpu::utils::EImageLayout::Undefined,
+				core::gpu::utils::EImageLayout::TransferDst,
+				false
+			);
 
-		_cmdBuf->BlitImage(*resolveColorAttachments[0].image, _outputImage);
+			_cmdBuf->BlitImage(*aaColorAttachments[0].image, _outputImage);
 
-		_cmdBuf->TransitionImageLayout(
-			_outputImage,
-			core::gpu::utils::EImageLayout::TransferDst,
-			core::gpu::utils::EImageLayout::Present,
-			false
-		);
-	});
+			_cmdBuf->TransitionImageLayout(
+				_outputImage,
+				core::gpu::utils::EImageLayout::TransferDst,
+				core::gpu::utils::EImageLayout::Present,
+				false
+			);
+		});
 
 	_cmdBuf->Submit(m_device, false);
 	m_device.ReleaseCommandBuffer(_cmdBuf);
@@ -747,6 +854,8 @@ void Renderer::PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform)
 	{
 		std::cerr << "Warning : Mesh pushed without BLAS !" << std::endl;
 	}
+
+	RegisterMesh(_mesh);
 
 	m_meshInstances.push_back({ _mesh, _transform });
 }
@@ -928,9 +1037,9 @@ void Renderer::DrawGI(core::gpu::CommandBuffer& _cmdBuf)
 	);
 
 	GIPushConstants pc{};
-	pc.sampleCount = 16;   
+	pc.sampleCount = 16;
 	pc.maxDistance = 50.0f;
-	pc.sunDirection = -glm::normalize(m_sunDirection);   
+	pc.sunDirection = -glm::normalize(m_sunDirection);
 	pc.sunColor = glm::vec3(1.0f);
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_giPipeline);
@@ -965,10 +1074,51 @@ void Renderer::DrawResolve(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_resolvePipeline);
 	_cmdBuf.Bind(*resolveDescriptorSets[m_device.currentFrame], *m_resolvePipeline, 0u);
 
+	ResolvePushConstants pc{};
+	pc.numLights = static_cast<uint32_t>(m_pointLights.size());
+
+	_cmdBuf.PushConstants(
+		*m_resolvePipeline,
+		static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+		0, sizeof(ResolvePushConstants), &pc
+	);
+
 	_cmdBuf.Dispatch((width + 15) / 16, (height + 15) / 16, 1);
 
 	_cmdBuf.TransitionImageLayout(
 		*resolveColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::General,
+		core::gpu::utils::EImageLayout::ShaderReadOnly,
+		false
+	);
+}
+
+void Renderer::DrawFXAA(core::gpu::CommandBuffer& _cmdBuf)
+{
+	auto [width, height] = m_device.GetSwapchainExtent();
+
+	_cmdBuf.TransitionImageLayout(
+		*aaColorAttachments[0].image,
+		core::gpu::utils::EImageLayout::Undefined,
+		core::gpu::utils::EImageLayout::General,
+		false
+	);
+
+	FXAAPushConstants pc{};
+	pc.texelSize = glm::vec2(1.0f / static_cast<float>(width), 1.0f / static_cast<float>(height));
+
+	_cmdBuf.Bind<core::gpu::Pipeline>(*m_fxaaPipeline);
+	_cmdBuf.Bind(*fxaaDescriptorSets[m_device.currentFrame], *m_fxaaPipeline, 0u);
+	_cmdBuf.PushConstants(
+		*m_fxaaPipeline,
+		static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+		0, sizeof(FXAAPushConstants), &pc
+	);
+
+	_cmdBuf.Dispatch((width + 15) / 16, (height + 15) / 16, 1);
+
+	_cmdBuf.TransitionImageLayout(
+		*aaColorAttachments[0].image,
 		core::gpu::utils::EImageLayout::General,
 		core::gpu::utils::EImageLayout::TransferSrc,
 		false
@@ -998,9 +1148,7 @@ void Renderer::BuildTLAS()
 
 	std::vector<core::gpu::AccelerationStructureInstance> instances;
 	instances.reserve(m_meshInstances.size());
-	std::vector<glm::vec4> instanceColors(MAX_INSTANCES, glm::vec4(0.6f, 0.6f, 0.6f, 1.0f));
 
-	uint32_t instanceIndex = 0;
 	for (const auto& meshInstance : m_meshInstances)
 	{
 		if (!meshInstance.first->blas)
@@ -1018,7 +1166,6 @@ void Renderer::BuildTLAS()
 
 		core::gpu::AccelerationStructureInstance instance{};
 		std::memcpy(&instance.transform, &transform, sizeof(transform));
-		instance.instanceCustomIndex = instanceIndex++;
 		instance.mask = 0xFF;
 		instance.instanceShaderBindingTableRecordOffset = 0;
 		instance.blas = meshInstance.first->blas.get();
@@ -1029,18 +1176,15 @@ void Renderer::BuildTLAS()
 			continue;
 		}
 
-		if (instanceIndex < MAX_INSTANCES)
+		if (meshInstance.first->meshTableIndex == UINT32_MAX)
 		{
-			auto it = m_meshColors.find(meshInstance.first);
-			glm::vec3 color = (it != m_meshColors.end()) ? it->second : glm::vec3(0.6f);
-			instanceColors[instanceIndex] = glm::vec4(color, 1.0f);
+			std::cerr << "Warning: Mesh not registered in mesh table, call RegisterMesh() before pushing it!\n";
+			continue;
 		}
 
-		instance.instanceCustomIndex = instanceIndex++;
+		instance.instanceCustomIndex = meshInstance.first->meshTableIndex;
 		instances.push_back(instance);
 	}
-
-	instanceColorBuffers[m_device.currentFrame]->CopyFrom(instanceColors.data(), sizeof(glm::vec4) * MAX_INSTANCES);
 
 	if (instances.empty()) return;
 
@@ -1051,6 +1195,72 @@ void Renderer::BuildTLAS()
 	tlasInfo.allowUpdate = false;
 
 	m_tlasPerFrame[m_device.currentFrame] = std::make_unique<core::gpu::AccelerationStructure>(m_device, tlasInfo);
+}
+
+uint32_t Renderer::RegisterBindlessTexture(const core::gpu::Texture& _texture)
+{
+	if (m_nextBindlessTextureIndex >= MAX_BINDLESS_TEXTURES)
+	{
+		std::cerr << "Bindless texture array full!\n";
+		return 0;
+	}
+
+	uint32_t idx = m_nextBindlessTextureIndex++;
+
+	for (uint32_t i = 0; i < m_device.FRAMES_IN_FLIGHT; ++i)
+	{
+		giDescriptorSets[i]->BindArray(12, idx, _texture);
+		giDescriptorSets[i]->Update(m_device);
+	}
+
+	return idx;
+}
+
+void Renderer::RegisterMesh(graphics::render::Mesh* _mesh)
+{
+	if (!_mesh || _mesh->meshTableIndex != UINT32_MAX) return;
+	if (m_nextMeshTableIndex >= MAX_MESHES) { std::cerr << "Mesh table full!\n"; return; }
+
+	if (_mesh->materials.empty())
+	{
+		std::cerr << "Warning: Mesh \"" << _mesh->instance.name << "\" has no material, using fallback.\n";
+		_mesh->materials.push_back(m_fallbackMaterial.get());
+	}
+
+	for (auto* mat : _mesh->materials)
+	{
+		if (!mat || mat->materialTableIndex != UINT32_MAX) continue;
+		if (m_nextMaterialTableIndex >= MAX_MATERIALS) { std::cerr << "Material table full!\n"; continue; }
+
+		mat->albedoBindlessIndex = RegisterBindlessTexture(*mat->albedoTexture);
+		mat->normalBindlessIndex = RegisterBindlessTexture(*mat->normalTexture);
+		mat->roughMetalBindlessIndex = RegisterBindlessTexture(*mat->roughnessMetalTexture);
+		mat->materialTableIndex = m_nextMaterialTableIndex++;
+
+		GPUMaterial gpuMat{
+			.baseColor = mat->gpuData.baseColor,
+			.params = mat->gpuData.params,
+			.albedoTexIndex = mat->albedoBindlessIndex,
+			.normalTexIndex = mat->normalBindlessIndex,
+			.roughMetalTexIndex = mat->roughMetalBindlessIndex
+		};
+		m_materialTableBuffer->CopyFrom(&gpuMat, sizeof(GPUMaterial), mat->materialTableIndex * sizeof(GPUMaterial));
+	}
+
+	_mesh->meshTableIndex = m_nextMeshTableIndex++;
+
+	uintptr_t vertexBase = _mesh->vertexBuffer->GetDeviceAddress();
+
+	MeshTableEntry entry{
+		.indices = _mesh->indexBuffer->GetDeviceAddress(),
+		.positions = vertexBase + offsetof(graphics::render::Vertex, position),
+		.normals = vertexBase + offsetof(graphics::render::Vertex, normal),
+		.uvs = vertexBase + offsetof(graphics::render::Vertex, uv),
+		.tangents = vertexBase + offsetof(graphics::render::Vertex, tangent),
+		.materialId = _mesh->materials.empty() ? 0 : _mesh->materials[0]->materialTableIndex,
+		.vertexStride = sizeof(graphics::render::Vertex)
+	};
+	m_meshTableBuffer->CopyFrom(&entry, sizeof(MeshTableEntry), _mesh->meshTableIndex * sizeof(MeshTableEntry));
 }
 
 void Renderer::RebuildAccelerationStructures()

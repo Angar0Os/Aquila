@@ -9,7 +9,7 @@ DescriptorPool::DescriptorPool(const Device& device)
 	std::vector<vk::DescriptorPoolSize> poolSizes = {
 		{ vk::DescriptorType::eUniformBuffer,            1024 },
 		{ vk::DescriptorType::eStorageBuffer,            1024 },
-		{ vk::DescriptorType::eCombinedImageSampler,     2048 },
+		{ vk::DescriptorType::eCombinedImageSampler,     16384 }, 
 		{ vk::DescriptorType::eSampledImage,             1024 },
 		{ vk::DescriptorType::eStorageImage,             512  },
 		{ vk::DescriptorType::eUniformTexelBuffer,       256  },
@@ -21,7 +21,7 @@ DescriptorPool::DescriptorPool(const Device& device)
 
 	auto createInfo = vk::DescriptorPoolCreateInfo{};
 
-	createInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+	createInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet | vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
 	createInfo.maxSets = 2048;
 	createInfo.poolSizeCount = uint32_t(poolSizes.size());
 	createInfo.pPoolSizes = poolSizes.data();

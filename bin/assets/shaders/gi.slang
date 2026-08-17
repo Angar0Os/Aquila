@@ -40,6 +40,36 @@ StructuredBuffer<float4> gInstanceColors;
 [[vk::binding(9, 0)]]
 Sampler2D gEnvironmentRaw;
 
+struct MeshTableEntry
+{
+    uint64_t indices;
+    uint64_t positions;
+    uint64_t normals;
+    uint64_t uvs;
+    uint64_t tangents;
+    uint     materialId;
+    uint     vertexStride;
+};
+
+struct GPUMaterial
+{
+    float4 baseColor;
+    float4 params;      
+    uint   albedoTexIndex;
+    uint   normalTexIndex;
+    uint   roughMetalTexIndex;
+    uint   _pad0;
+};
+
+[[vk::binding(10, 0)]]
+StructuredBuffer<MeshTableEntry> gMeshTable;
+
+[[vk::binding(11, 0)]]
+StructuredBuffer<GPUMaterial> gMaterialTable;
+
+[[vk::binding(12, 0)]]
+Sampler2D gBindlessTextures[4096];
+
 [[vk::push_constant]]
 cbuffer GIPushConstants
 {
@@ -128,6 +158,69 @@ bool TraceOcclusion(float3 origin, float3 direction, float maxDist)
     return q.CommittedStatus() != COMMITTED_NOTHING;
 }
 
+struct HitSurface
+{
+    float3 position;
+    float3 normal;
+    float2 uv;
+    GPUMaterial material;
+};
+
+uint3 LoadTriangleIndices(uint64_t indicesAddr, uint primitiveIndex)
+{
+    uint* idxBase = reinterpret<uint*>(indicesAddr);
+    uint base = primitiveIndex * 3;
+    return uint3(idxBase[base + 0], idxBase[base + 1], idxBase[base + 2]);
+}
+
+float3 LoadVertexFloat3(uint64_t baseAddr, uint vertexIndex, uint stride)
+{
+    uint64_t addr = baseAddr + uint64_t(vertexIndex) * uint64_t(stride);
+    return *reinterpret<float3*>(addr);
+}
+
+float2 LoadVertexFloat2(uint64_t baseAddr, uint vertexIndex, uint stride)
+{
+    uint64_t addr = baseAddr + uint64_t(vertexIndex) * uint64_t(stride);
+    return *reinterpret<float2*>(addr);
+}
+
+HitSurface GetHitSurface(uint meshTableIndex, uint primitiveIndex, float2 barycentrics)
+{
+    MeshTableEntry meshEntry = gMeshTable[meshTableIndex];
+    uint3 tri = LoadTriangleIndices(meshEntry.indices, primitiveIndex);
+
+    float3 n0 = LoadVertexFloat3(meshEntry.normals, tri.x, meshEntry.vertexStride);
+    float3 n1 = LoadVertexFloat3(meshEntry.normals, tri.y, meshEntry.vertexStride);
+    float3 n2 = LoadVertexFloat3(meshEntry.normals, tri.z, meshEntry.vertexStride);
+
+    float2 uv0 = LoadVertexFloat2(meshEntry.uvs, tri.x, meshEntry.vertexStride);
+    float2 uv1 = LoadVertexFloat2(meshEntry.uvs, tri.y, meshEntry.vertexStride);
+    float2 uv2 = LoadVertexFloat2(meshEntry.uvs, tri.z, meshEntry.vertexStride);
+
+    float3 baryWeights = float3(1.0f - barycentrics.x - barycentrics.y, barycentrics.x, barycentrics.y);
+
+    HitSurface surface;
+    surface.normal   = normalize(n0 * baryWeights.x + n1 * baryWeights.y + n2 * baryWeights.z);
+    surface.uv       = uv0 * baryWeights.x + uv1 * baryWeights.y + uv2 * baryWeights.z;
+    surface.material = gMaterialTable[meshEntry.materialId];
+
+    return surface;
+}
+
+float3 SampleMaterialAlbedo(GPUMaterial mat, float2 uv)
+{
+    float3 albedo = mat.baseColor.rgb;
+
+    bool hasAlbedoTex = mat.params.z > 0.5f;
+    if (hasAlbedoTex)
+    {
+        albedo *= gBindlessTextures[NonUniformResourceIndex(mat.albedoTexIndex)].SampleLevel(uv, 0).rgb;
+    }
+
+    return albedo;
+}
+
 float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
 {
     float3 radiance = float3(0.0f, 0.0f, 0.0f);
@@ -136,7 +229,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
     float3 rayOrigin = origin;
     float3 rayDir = direction;
 
-    const uint maxBounces = 16; 
+    const uint maxBounces = 16;
 
     for (uint bounce = 0; bounce < maxBounces; ++bounce)
     {
@@ -153,15 +246,24 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         if (q.CommittedStatus() == COMMITTED_NOTHING)
         {
             float2 envUV = DirectionToEquirectUV(rayDir);
-            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb; 
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb;
             break;
         }
 
         float3 hitPos = rayOrigin + rayDir * q.CommittedRayT();
-        
-        float3 hitNormal = normalize(-rayDir);
-        uint hitInstance = q.CommittedInstanceID();
-        float3 approxAlbedo = gInstanceColors[hitInstance].rgb;  
+
+        uint meshTableIndex   = q.CommittedInstanceID();
+        uint primitiveIndex   = q.CommittedPrimitiveIndex();
+        float2 barycentrics   = q.CommittedTriangleBarycentrics();
+
+        HitSurface surface = GetHitSurface(meshTableIndex, primitiveIndex, barycentrics);
+
+        float3 hitNormal = surface.normal;
+
+        if (dot(hitNormal, rayDir) > 0.0f)
+            hitNormal = -hitNormal;
+
+        float3 approxAlbedo = SampleMaterialAlbedo(surface.material, surface.uv);
 
         bool occluded = TraceOcclusion(hitPos + hitNormal * 0.01f, sunDirection, maxDistance);
         if (!occluded)

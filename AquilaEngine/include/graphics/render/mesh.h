@@ -63,6 +63,8 @@ namespace graphics::render
 		std::vector<Material*>								materials;
 		std::vector<std::unique_ptr<Material>>				ownedMaterials;
 
+		uint32_t											meshTableIndex = UINT32_MAX;
+
 		explicit Mesh(const core::gpu::Device& _device, MeshInstance _instance);
 		~Mesh() noexcept;
 

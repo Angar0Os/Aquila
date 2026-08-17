@@ -38,6 +38,14 @@ namespace graphics::render
 		float							radius = 0.0f;
 	};
 
+	struct GPULight // TODO : We will remove this and put this into UBO after Evoke.
+	{
+		glm::vec3 position;
+		float     radius;
+		glm::vec3 color;
+		float     intensity;
+	};
+
 	struct GBufferPushConstants
 	{
 		glm::mat4 model;
@@ -48,6 +56,39 @@ namespace graphics::render
 	{
 		glm::vec3 lightDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
 		float     maxDistance = 1000.0f;
+	};
+
+	struct ResolvePushConstants
+	{
+		uint32_t numLights = 0;
+		float    _pad[3] = { 0.0f, 0.0f, 0.0f };
+	};
+
+	struct FXAAPushConstants
+	{
+		glm::vec2 texelSize;
+		float     _pad[2] = { 0.0f, 0.0f };
+	};
+
+	struct MeshTableEntry
+	{
+		uintptr_t indices;
+		uintptr_t positions;
+		uintptr_t normals;
+		uintptr_t uvs;
+		uintptr_t tangents;
+		uint32_t  materialId;
+		uint32_t  vertexStride;
+	};
+
+	struct GPUMaterial
+	{
+		glm::vec4 baseColor;
+		glm::vec4 params;
+		uint32_t  albedoTexIndex;
+		uint32_t  normalTexIndex;
+		uint32_t  roughMetalTexIndex;
+		uint32_t  _pad0;
 	};
 
 	struct GIPushConstants
@@ -93,14 +134,20 @@ namespace graphics::render
 
 		void Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outputImage);
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
+		void RegisterMesh(graphics::render::Mesh* _mesh);
 
 		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); } // TODO : This is only to debug GI.
-		void SetMeshColor(graphics::render::Mesh* _mesh, const glm::vec3& _color) { m_meshColors[_mesh] = _color; }
+
+		void PushLight(const glm::vec3& _position, const glm::vec3& _color, float _intensity, float _radius)
+		{
+			m_pointLights.push_back({ _position, _radius, _color, _intensity });
+		}
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	resolveDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	giDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	fxaaDsLayouts;
 
 		std::unique_ptr<core::gpu::DescriptorSetLayout>					materialLayout;
 
@@ -108,14 +155,15 @@ namespace graphics::render
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			resolveDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			shadowDescriptorSets;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			giDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			fxaaDescriptorSets;
 
 		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
 
 		std::vector<PassAttachment>										gBufferColorAttachments;
 		PassAttachment													gBufferDepthAttachment;
-
 		std::vector<PassAttachment>										giColorAttachments;
 		std::vector<PassAttachment>										resolveColorAttachments;
+		std::vector<PassAttachment>										aaColorAttachments;
 
 
 
@@ -138,15 +186,19 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline> BuildShadowPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildGIPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildResolvePipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildFXAAPipeline();
 
 		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawShadow(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawGI(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawResolve(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawFXAA(core::gpu::CommandBuffer& _cmdBuf);
 
 		void UpdateUniformBuffers();
 		void BuildTLAS();
 		void RebuildAccelerationStructures();
+
+		uint32_t RegisterBindlessTexture(const core::gpu::Texture& _texture);
 
 		const core::gpu::Device& m_device;
 
@@ -154,6 +206,7 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline>		m_shadowPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_resolvePipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_fxaaPipeline;
 
 		std::unique_ptr<graphics::render::Material> m_fallbackMaterial;
 
@@ -163,7 +216,6 @@ namespace graphics::render
 		std::vector<std::pair<Mesh*, glm::mat4>>	m_meshInstances;
 		std::unordered_map<Mesh*, glm::mat4>		m_prevMeshInstances[core::gpu::Device::FRAMES_IN_FLIGHT];
 
-		// TODO : We need to find a better way of doing this.
 		std::unique_ptr<core::gpu::AccelerationStructure> m_fallbackTlas;
 		void CreateFallbackTLAS();
 
@@ -178,10 +230,23 @@ namespace graphics::render
 		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
 
 		uint32_t														m_giParity = 0;
-		std::unordered_map<Mesh*, glm::vec3>							m_meshColors;   
 
-		std::vector<std::unique_ptr<core::gpu::Buffer>> instanceColorBuffers;
-		static constexpr uint32_t MAX_INSTANCES = 256;
+		std::vector<std::unique_ptr<core::gpu::Buffer>> lightBuffers;
+		static constexpr uint32_t						MAX_LIGHTS = 32;
+		std::vector<GPULight>							m_pointLights;
+
+		size_t											m_maxMeshesInTableBuffer = 0;
+		std::unique_ptr<core::gpu::Buffer>				m_meshTableBuffer = nullptr;
+		std::unique_ptr<core::gpu::Buffer>				m_materialTableBuffer = nullptr;
+
+		static constexpr uint32_t						MAX_MESHES = 256;
+		static constexpr uint32_t						MAX_MATERIALS = 512;
+		static constexpr uint32_t						MAX_BINDLESS_TEXTURES = 4096;
+
+		uint32_t										m_nextMeshTableIndex = 0;
+		uint32_t										m_nextMaterialTableIndex = 0;
+		uint32_t										m_nextBindlessTextureIndex = 0;
+
 	};
 }
 

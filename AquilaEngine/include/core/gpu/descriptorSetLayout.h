@@ -17,6 +17,9 @@ namespace core::gpu
 		uint32_t descriptorCount = 1;
 		utils::EDescriptorType descriptorType;
 		utils::EShaderStage stageFlags;
+
+		bool partiallyBound = false;
+		bool updateAfterBind = false;
 	};
 
 	struct DescriptorSetLayoutCreateInfo

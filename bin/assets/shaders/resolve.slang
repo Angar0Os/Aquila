@@ -10,6 +10,14 @@ cbuffer UniformBufferObject
     uint frameCount;
 };
 
+struct GPULight
+{
+    float3 position;
+    float radius;
+    float3 color;
+    float intensity;
+};
+
 [[vk::binding(1, 0)]]
 Sampler2D albedoTex;
 
@@ -30,6 +38,18 @@ Sampler2D depthTex;
 
 [[vk::binding(7, 0)]]
 Sampler2D envMapRaw;
+
+[[vk::binding(8, 0)]]
+StructuredBuffer<GPULight> lights;
+
+[[vk::push_constant]]
+cbuffer ResolvePushConstants
+{
+    uint numLights;
+    uint _pad0;
+    uint _pad1;
+    uint _pad2;
+};
 
 static const float3 sunDir = normalize(float3(-1.0, -0.2, -0.3));
 static const float3 sunColor = float3(1.0, 1.0, 1.0);
@@ -79,8 +99,7 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
         float3 viewDir = normalize(farPos - viewPos.xyz);
         float2 envUV = DirectionToEquirectUV(viewDir);
         float3 skyHdr = envMapRaw.SampleLevel(envUV, 0).rgb;
-        float3 skyLdr = ACESFilm(skyHdr, exposure);
-        outImage[coord] = float4(skyLdr, 1.0);
+        outImage[coord] = float4(ACESFilm(skyHdr, exposure), 1.0);
         return;
     }
 
@@ -90,8 +109,26 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
 
     float NdotL = max(dot(N, -sunDir), 0.0);
     float3 direct = albedo * sunColor * NdotL * shadow;
+    float3 worldPos = ReconstructPosition(uv, depth);
 
-    float3 hdrResult = direct * gi;
+    for (uint i = 0; i < numLights; ++i)
+    {
+        GPULight light = lights[i];
+
+        float3 toLight = light.position - worldPos;
+        float  dist    = length(toLight);
+        float3 L       = toLight / max(dist, 0.0001f);
+
+        float attenuation = 1.0f / max(dist * dist, 0.0001f);
+        if (light.radius > 0.0f)
+            attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
+
+        float pointNdotL = max(dot(N, L), 0.0f);
+
+        direct += albedo * light.color * light.intensity * pointNdotL * attenuation;
+    }
+
+    float3 hdrResult = direct + gi;
     float3 ldrResult = ACESFilm(hdrResult, exposure);
 
     outImage[coord] = float4(ldrResult, 1.0);

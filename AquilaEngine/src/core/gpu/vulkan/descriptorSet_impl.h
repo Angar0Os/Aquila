@@ -24,6 +24,7 @@ namespace core::gpu
 			uint32_t			binding;
 			vk::DescriptorType	type;
 			size_t				infoIndex;
+			uint32_t			arrayElement = 0;
 		};
 
 		std::vector<BindingInfo> bindingInfos;

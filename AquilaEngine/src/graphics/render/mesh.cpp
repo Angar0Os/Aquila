@@ -35,18 +35,18 @@ void Mesh::CreateBuffers()
 	auto vertexBufferSize = instance.vertices.size() * sizeof(Vertex);
 	auto indicesBufferSize = instance.indices.size() * sizeof(uint32_t);
 
-	core::gpu::BufferCreateInfo stagingVertexInfo {
-		.size				= vertexBufferSize,
-		.usage				= core::gpu::utils::EBufferUsage::TransferSrc,
-		.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+	core::gpu::BufferCreateInfo stagingVertexInfo{
+		.size = vertexBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::TransferSrc,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 	};
 
 	auto stagingVertexBuffer = std::make_unique<core::gpu::Buffer>(device, stagingVertexInfo);
 
-	core::gpu::BufferCreateInfo stagingIndexInfo {
-		.size				= indicesBufferSize,
-		.usage				= core::gpu::utils::EBufferUsage::TransferSrc,
-		.memoryProperties	= core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+	core::gpu::BufferCreateInfo stagingIndexInfo{
+		.size = indicesBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::TransferSrc,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 	};
 
 	auto stagingIndexBuffer = std::make_unique<core::gpu::Buffer>(device, stagingIndexInfo);
@@ -54,44 +54,44 @@ void Mesh::CreateBuffers()
 	stagingVertexBuffer->CopyFrom(instance.vertices.data(), vertexBufferSize);
 	stagingIndexBuffer->CopyFrom(instance.indices.data(), indicesBufferSize);
 
-	core::gpu::BufferCreateInfo vertexInfo {
-		.size				= vertexBufferSize,
-		.usage				= core::gpu::utils::EBufferUsage::VertexBuffer | core::gpu::utils::EBufferUsage::TransferDst,
-		.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal
+	core::gpu::BufferCreateInfo vertexInfo{
+		.size = vertexBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::VertexBuffer | core::gpu::utils::EBufferUsage::TransferDst | core::gpu::utils::EBufferUsage::ShaderDeviceAddress,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal
 	};
 	vertexBuffer = std::make_unique<core::gpu::Buffer>(device, vertexInfo);
 
-	core::gpu::BufferCreateInfo indexInfo {
-		.size				= indicesBufferSize,
-		.usage				= core::gpu::utils::EBufferUsage::IndexBuffer | core::gpu::utils::EBufferUsage::TransferDst,
-		.memoryProperties	= core::gpu::utils::EMemoryProperty::DeviceLocal
+	core::gpu::BufferCreateInfo indexInfo{
+		.size = indicesBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::IndexBuffer | core::gpu::utils::EBufferUsage::TransferDst | core::gpu::utils::EBufferUsage::ShaderDeviceAddress,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal
 	};
 	indexBuffer = std::make_unique<core::gpu::Buffer>(device, indexInfo);
 
-	core::gpu::BufferCreateInfo rtVertexInfo {
-		.size				=	vertexBufferSize,
-		.usage				=	core::gpu::utils::EBufferUsage::AccelerationStructureBuildInput |
+	core::gpu::BufferCreateInfo rtVertexInfo{
+		.size = vertexBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::AccelerationStructureBuildInput |
 								core::gpu::utils::EBufferUsage::ShaderDeviceAddress |
 								core::gpu::utils::EBufferUsage::StorageBuffer,
-		.memoryProperties	=	core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 	};
 	rtVertexBuffer = std::make_unique<core::gpu::Buffer>(device, rtVertexInfo);
 	rtVertexBuffer->CopyFrom(instance.vertices.data(), vertexBufferSize);
 
 	core::gpu::BufferCreateInfo rtIndexInfo{
-		.size				= indicesBufferSize,
-		.usage				=	core::gpu::utils::EBufferUsage::AccelerationStructureBuildInput |
+		.size = indicesBufferSize,
+		.usage = core::gpu::utils::EBufferUsage::AccelerationStructureBuildInput |
 								core::gpu::utils::EBufferUsage::ShaderDeviceAddress |
 								core::gpu::utils::EBufferUsage::StorageBuffer,
-		.memoryProperties	=	core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
+		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 	};
 	rtIndexBuffer = std::make_unique<core::gpu::Buffer>(device, rtIndexInfo);
 	rtIndexBuffer->CopyFrom(instance.indices.data(), indicesBufferSize);
 
-	cmdBuf->Record([&](){
+	cmdBuf->Record([&]() {
 		cmdBuf->CopyBuffer(*stagingVertexBuffer, *vertexBuffer, vertexBufferSize);
 		cmdBuf->CopyBuffer(*stagingIndexBuffer, *indexBuffer, indicesBufferSize);
-	});
+		});
 	cmdBuf->Submit(device, true);
 }
 
@@ -105,21 +105,21 @@ void Mesh::CreateBLAS()
 
 	core::gpu::AccelerationStructureGeometry geometry
 	{
-		.vertexBuffer	= rtVertexBuffer.get(),
-		.indexBuffer	= rtIndexBuffer.get(),
-		.vertexCount	= static_cast<uint32_t>(instance.vertices.size()),
-		.vertexStride	= sizeof(Vertex),
-		.indexCount		= static_cast<uint32_t>(instance.indices.size()),
-		.triangleCount	= static_cast<uint32_t>(instance.indices.size() / 3),
-		.opaque			= true
+		.vertexBuffer = rtVertexBuffer.get(),
+		.indexBuffer = rtIndexBuffer.get(),
+		.vertexCount = static_cast<uint32_t>(instance.vertices.size()),
+		.vertexStride = sizeof(Vertex),
+		.indexCount = static_cast<uint32_t>(instance.indices.size()),
+		.triangleCount = static_cast<uint32_t>(instance.indices.size() / 3),
+		.opaque = true
 	};
 
 	core::gpu::AccelerationStructureCreateInfo blasInfo
 	{
-		.type				= core::gpu::utils::EAccelerationStructureType::BottomLevel,
-		.geometries			= { geometry },
-		.allowUpdate		= true,
-		.preferFastTrace	= true 
+		.type = core::gpu::utils::EAccelerationStructureType::BottomLevel,
+		.geometries = { geometry },
+		.allowUpdate = true,
+		.preferFastTrace = true
 	};
 
 	blas = std::make_unique<core::gpu::AccelerationStructure>(device, blasInfo);
@@ -139,11 +139,11 @@ void Mesh::EnsureDefaultSubmesh()
 
 	SubMesh defaultSubmesh
 	{
-		.name			= "default",
-		.firstIndex		= 0,
-		.indexCount		= static_cast<uint32_t>(instance.indices.size()),
-		.vertexOffset	= 0,
-		.materialIndex	= 0
+		.name = "default",
+		.firstIndex = 0,
+		.indexCount = static_cast<uint32_t>(instance.indices.size()),
+		.vertexOffset = 0,
+		.materialIndex = 0
 	};
 
 	subMeshes.push_back(defaultSubmesh);

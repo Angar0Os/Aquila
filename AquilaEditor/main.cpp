@@ -20,18 +20,19 @@ int main(int argc, char** argv)
 {
 	auto window = std::make_unique<core::Window>(core::WindowDesc{
 		.appName = "Aquila - Restir Showdown",
-		.windowSize = { 1080, 720 }
-		});
+		.windowSize = { 1080, 720 },
+		.isFullscreen = true,
+		.exclusiveFullscreen = true
+	});
 
 	auto gpu = std::make_unique<core::gpu::Device>(*window);
 	auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
 
-	auto viking = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/DamagedHelmet.glb", *renderer->materialLayout);
-	auto plane = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/plane.glb", *renderer->materialLayout);
-	
-	renderer->SetMeshColor(viking.get(), glm::vec3(0.0f));
-	renderer->SetMeshColor(plane.get(), glm::vec3(0.8f, 0.1f, 0.8f));  
-	
+	auto helmet = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/DamagedHelmet.glb", *renderer->materialLayout);
+	auto plane = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/sphere.glb", *renderer->materialLayout);
+	 
+	renderer->PushLight(glm::vec3(1.0f, 1.5f, 4.0f), glm::vec3(1.0f, 0.0f, 0.0f), 10.0f, 20.0f);
+
 	glm::mat4 transform = glm::rotate(
 		glm::mat4(1.0f),
 		glm::radians(45.0f),
@@ -50,6 +51,11 @@ int main(int argc, char** argv)
 	{
 		window->PollEvents();
 
+		if (window->WasFramebufferResized())
+		{
+			gpu->RequestResize(); 
+		}
+
 		float time = std::chrono::duration<float>(std::chrono::steady_clock::now() - startTime).count();
 
 		float angle = time * 0.5f; 
@@ -58,12 +64,18 @@ int main(int argc, char** argv)
 			-0.6f,       
 			sin(angle)
 		));
+
 		renderer->SetSunDirection(sunDir);
 
-		renderer->PushMesh(viking.get(), transform);
+		renderer->PushMesh(helmet.get(), transform);
 		renderer->PushMesh(plane.get(), planeTransform);
 
 		auto image = gpu->AcquireNextImage();
+		if (!image)
+		{
+			continue; 
+		}
+
 		renderer->Render(gpu->AcquireCommandBuffer(), *image);
 		gpu->Present();
 	}

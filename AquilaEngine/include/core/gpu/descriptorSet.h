@@ -25,6 +25,9 @@ namespace core::gpu
 		template<typename T>
 		void Bind(uint32_t _binding, const T& _input);
 
+		void BindArray(uint32_t _binding, uint32_t _arrayElement, const Texture& _texture);
+
+
 		void Update(const Device& _device);
 
 		Impl& GetImpl() const;

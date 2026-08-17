@@ -214,5 +214,8 @@
     <None Include="..\bin\assets\shaders\gi.slang">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="..\bin\assets\shaders\fxaa.slang">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

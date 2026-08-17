@@ -15,6 +15,7 @@ namespace core
 		glm::vec2	windowSize;
 		bool		isFullscreen	= false;
 		bool		isResizable		= false;
+		bool		exclusiveFullscreen = false;
 	};
 
 	class Window
@@ -22,6 +23,9 @@ namespace core
 	private:
 		WindowDesc m_wndInfo;
 		GLFWwindow* m_window;
+
+		static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
+		bool		m_framebufferResized = false;
 	public:
 		explicit Window(const WindowDesc _wndDesc);
 		~Window() noexcept;
@@ -39,6 +43,9 @@ namespace core
 		const bool			IsResizable()	{ return m_wndInfo.isResizable; }
 
 		GLFWwindow*			GetHandle()		const { return m_window; }
+
+		bool				WasFramebufferResized();          
+		std::pair<int, int> GetFramebufferSize() const;
 	};
 }
 

@@ -265,8 +265,12 @@ void Device::Impl::PickPhysicalDevice()
 			vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>();
 
 		bool samplerAniso = basicFeatures.template get<vk::PhysicalDeviceFeatures2>().features.samplerAnisotropy;
+		bool shaderInt64 = basicFeatures.template get<vk::PhysicalDeviceFeatures2>().features.shaderInt64;
 		bool dynRender = basicFeatures.template get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering;
 		bool extDynState = basicFeatures.template get<vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT>().extendedDynamicState;
+
+		if (!shaderInt64)
+			continue;
 
 		std::vector<const char*> rtExtensions = {
 			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -364,12 +368,20 @@ void Device::Impl::CreateLogicalDevice()
 	accelFeatures.accelerationStructure = VK_TRUE;
 	accelFeatures.pNext = &rtPipelineFeatures;
 
+	vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures{};
+	descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+	descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE;
+	descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+	descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE;
+	descriptorIndexingFeatures.pNext = &accelFeatures;
+
 	vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
 	bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
-	bufferDeviceAddressFeatures.pNext = &accelFeatures;
+	bufferDeviceAddressFeatures.pNext = &descriptorIndexingFeatures;
 
 	vk::StructureChain featureChain = {
-		vk::PhysicalDeviceFeatures2 {.features = {.samplerAnisotropy = true} },
+		vk::PhysicalDeviceFeatures2 {.features = {.samplerAnisotropy = true, .shaderInt64 = true, } },
 		vk::PhysicalDeviceVulkan11Features {.shaderDrawParameters = true},
 		vk::PhysicalDeviceVulkan13Features {.synchronization2 = true, .dynamicRendering = true},
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT {.extendedDynamicState = true},
@@ -592,6 +604,11 @@ void Device::Impl::RecreateSwapchain()
 
 Image* Device::AcquireNextImage()
 {
+	if (m_impl->needsResize)
+	{
+		m_impl->RecreateSwapchain();
+	}
+
 	m_impl->device.waitForFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence, VK_TRUE, UINT64_MAX);
 	m_impl->device.resetFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence);
 
@@ -614,7 +631,8 @@ Image* Device::AcquireNextImage()
 
 	if (result.result == vk::Result::eErrorOutOfDateKHR)
 	{
-		return nullptr;
+		m_impl->needsResize = true;
+		return nullptr; 
 	}
 
 	if (result.result != vk::Result::eSuccess &&
@@ -693,6 +711,11 @@ void Device::Present()
 	}
 
 	++currentFrame %= m_impl->frameSyncObjects.size();
+}
+
+void Device::RequestResize()
+{
+	m_impl->needsResize = true;
 }
 
 Device::Impl::Impl(const Window& _wnd, const Device& _device)
