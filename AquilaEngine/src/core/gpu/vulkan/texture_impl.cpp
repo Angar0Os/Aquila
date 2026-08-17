@@ -4,21 +4,25 @@
 
 using namespace core::gpu;
 
-Texture::Texture(const Device& _device, const Image& _image)
+Texture::Texture(const Device& _device, const Image& _image, utils::ETextureFilter _filter)
     : m_impl(new Impl)
 {
     vk::PhysicalDeviceProperties properties = _device.GetImpl().physicalDevice.getProperties();
 
+    vk::Filter vkFilter = (_filter == utils::ETextureFilter::Nearest) ? vk::Filter::eNearest : vk::Filter::eLinear;
+
     vk::SamplerCreateInfo samplerInfo{};
-    samplerInfo.magFilter = vk::Filter::eLinear;
-    samplerInfo.minFilter = vk::Filter::eLinear;
-    samplerInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
-    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
-    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.magFilter = vkFilter;
+    samplerInfo.minFilter = vkFilter;
+    samplerInfo.mipmapMode = (_filter == utils::ETextureFilter::Nearest)
+        ? vk::SamplerMipmapMode::eNearest
+        : vk::SamplerMipmapMode::eLinear;
+    samplerInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge; 
+    samplerInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+    samplerInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
     samplerInfo.mipLodBias = 0.0f;
-    samplerInfo.anisotropyEnable = vk::True;
-    samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+    samplerInfo.anisotropyEnable = (_filter == utils::ETextureFilter::Nearest) ? vk::False : vk::True;
+    samplerInfo.maxAnisotropy = (_filter == utils::ETextureFilter::Nearest) ? 1.0f : properties.limits.maxSamplerAnisotropy;
     samplerInfo.compareEnable = vk::False;
     samplerInfo.compareOp = vk::CompareOp::eAlways;
 

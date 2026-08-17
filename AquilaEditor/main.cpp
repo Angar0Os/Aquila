@@ -17,6 +17,8 @@
 
 #include <audio/audioSystem.h>
 
+#include <iostream>
+
 #include <chrono>
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
@@ -29,10 +31,12 @@ int main(int argc, char** argv)
 		.isFullscreen = false,
 		.isResizable = true,
 		.exclusiveFullscreen = false
-	});
+		});
 
 	auto gpu = std::make_unique<core::gpu::Device>(*window);
 	auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
+
+	std::cout << "[main] materialLibrary=" << &renderer->GetMaterialLibrary() << "\n";
 
 	auto audioSystem = std::make_unique<audio::AudioSystem>();
 
@@ -49,13 +53,13 @@ int main(int argc, char** argv)
 
 	mapper.PushContext("Debug");
 
-	//auto scene = loaders::MeshLoader::LoadGLTFScene(*gpu, "assets/models/testSceneQuentin.glb", *renderer->materialLayout);
-	auto helmet = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/DamagedHelmet.glb", *renderer->materialLayout);
-	auto plane = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/sphere.glb", *renderer->materialLayout);
+	auto testScene = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/testSceneQuentin.glb", renderer->GetTextureLibrary(), renderer->GetMaterialLibrary());
+	//auto helmet = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/DamagedHelmet.glb", renderer->GetTextureLibrary(), renderer->GetMaterialLibrary());
+	//auto plane = loaders::MeshLoader::LoadGLTF(*gpu, "assets/models/sphere.glb", renderer->GetTextureLibrary(), renderer->GetMaterialLibrary());
 
-	renderer->PushLight(glm::vec3(1.0f, 1.5f, 4.0f), glm::vec3(1.0f, 0.0f, 0.0f), 10.0f, 20.0f);
+	renderer->PushLight(glm::vec3(1.0f, 3.0f, 4.0f), glm::vec3(1.0f, 1.0f, 1.0f), 10.0f, 20.0f);
 
-	glm::mat4 transform = glm::rotate(
+	/*glm::mat4 transform = glm::rotate(
 		glm::mat4(1.0f),
 		glm::radians(45.0f),
 		glm::vec3(1.0f, 0.0f, 0.0f)
@@ -64,17 +68,31 @@ int main(int argc, char** argv)
 	glm::mat4 planeTransform = glm::translate(
 		glm::mat4(1.0f),
 		glm::vec3(0.0f, -2.0f, 0.0f)
-	);
+	);*/
 
-	//glm::mat4 transform(0.0f);
+	glm::mat4 transform(1.0f);
+
+	// Plane (index 0) stays at identity; the rest get spread out along X so they don't overlap.
+	std::vector<glm::mat4> meshTransforms(testScene.size(), glm::mat4(1.0f));
+
+	constexpr float kSpacing = 2.5f;
+	constexpr float kHeight = 1.0f;
+
+	for (size_t i = 1; i < meshTransforms.size(); ++i)
+	{
+		meshTransforms[i] = glm::translate(
+			glm::mat4(1.0f),
+			glm::vec3(static_cast<float>(i) * kSpacing, kHeight, 0.0f)
+		);
+	}
 
 	auto startTime = std::chrono::steady_clock::now();
 
-	audioSystem->Play(audio::MusicInfo {
+	audioSystem->Play(audio::MusicInfo{
 		.path = "assets/music/test.mp3",
 		.baseVolume = 1.0f,
 		.tempo = 130.0f
-	});
+		});
 
 	while (!window->ShouldClose())
 	{
@@ -98,20 +116,18 @@ int main(int argc, char** argv)
 		));
 
 		renderer->SetSunDirection(sunDir);
-		
-		/*for (auto& obj : scene)
-			renderer->PushMesh(obj.mesh.get(), obj.worldTransform);*/
 
-		renderer->PushMesh(helmet.get(), transform);
-		renderer->PushMesh(plane.get(), planeTransform);
+		for (size_t i = 0; i < testScene.size(); ++i)
+			renderer->PushMesh(testScene[i].get(), meshTransforms[i]);
+
+		//renderer->PushMesh(helmet[0].get(), transform);
+		//renderer->PushMesh(plane[0].get(), planeTransform);
 
 		auto image = gpu->AcquireNextImage();
 		if (!image)
 		{
 			continue;
 		}
-
-		std::cout << audioSystem->GetCurrentRow() << std::endl;
 
 		renderer->Render(gpu->AcquireCommandBuffer(), *image);
 		gpu->Present();

@@ -5,11 +5,18 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 #include <glm/glm.hpp>
 
 #include <graphics/render/material.h>
 
-namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBuffer; class Device; }
+namespace core::gpu
+{
+	class AccelerationStructure;
+	class Buffer;
+	class CommandBuffer;
+	class Device;
+}
 
 namespace graphics::render
 {
@@ -32,60 +39,54 @@ namespace graphics::render
 	struct SubMesh
 	{
 		std::string name;
-		uint32_t	firstIndex = 0;
-		uint32_t	indexCount = 0;
-		uint32_t	vertexOffset = 0;
-		uint32_t	materialIndex = 0;
+
+		uint32_t firstIndex = 0;
+		uint32_t indexCount = 0;
+		uint32_t vertexOffset = 0;
+
+		MaterialHandle material = INVALID_MATERIAL;
 	};
 
 	struct MeshInstance
 	{
-		std::string				name = "mesh";
-		std::string				path = "undefined";
+		std::string name = "mesh";
+		std::string path = "undefined";
 
-		std::vector<Vertex>		vertices;
-		std::vector<uint32_t>	indices;
-		std::vector<SubMesh>	subMeshes;
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
+		std::vector<SubMesh> subMeshes;
 	};
 
 	struct Mesh
 	{
-		const core::gpu::Device&							device;
-		MeshInstance										instance;
+		const core::gpu::Device& device;
+		MeshInstance instance;
 
-		std::unique_ptr<core::gpu::Buffer>					vertexBuffer;
-		std::unique_ptr<core::gpu::Buffer>					indexBuffer;
-		std::unique_ptr<core::gpu::Buffer>					rtVertexBuffer;
-		std::unique_ptr<core::gpu::Buffer>					rtIndexBuffer;
-		std::unique_ptr<core::gpu::AccelerationStructure>	blas;
+		std::unique_ptr<core::gpu::Buffer> vertexBuffer;
+		std::unique_ptr<core::gpu::Buffer> indexBuffer;
+		std::unique_ptr<core::gpu::Buffer> rtVertexBuffer;
+		std::unique_ptr<core::gpu::Buffer> rtIndexBuffer;
+		std::unique_ptr<core::gpu::AccelerationStructure> blas;
 
-		std::vector<SubMesh>								subMeshes;
-		std::vector<Material*>								materials;
-		std::vector<std::unique_ptr<Material>>				ownedMaterials;
+		uint32_t meshTableIndex = UINT32_MAX;
 
-		uint32_t											meshTableIndex = UINT32_MAX;
+		explicit Mesh(
+			const core::gpu::Device& _device,
+			MeshInstance _instance
+		);
 
-		explicit Mesh(const core::gpu::Device& _device, MeshInstance _instance);
 		~Mesh() noexcept;
 
 		void CreateBuffers();
 		void CreateBLAS();
 
-		void EnsureDefaultSubmesh(); // TODO : Need to know if this is rly important.
-
-		Material* GetMaterial(uint32_t index)
-		{
-			if (index < materials.size())
-				return materials[index];
-
-			return nullptr;
-		}
+		void EnsureDefaultSubmesh();
 	};
 
 	struct SceneMeshInstance
 	{
 		std::unique_ptr<Mesh> mesh;
-		glm::mat4             worldTransform;
+		glm::mat4 worldTransform;
 	};
 }
 
@@ -103,9 +104,14 @@ namespace std
 			size_t h5 = hash<float>()(vertex.uv.x);
 			size_t h6 = hash<float>()(vertex.uv.y);
 
-			return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4) ^ (h6 << 5);
+			return h1 ^
+				(h2 << 1) ^
+				(h3 << 2) ^
+				(h4 << 3) ^
+				(h5 << 4) ^
+				(h6 << 5);
 		}
 	};
 }
 
-#endif //AQUILA_ENGINE_GRAPHICS_RENDER_MESH_H
+#endif // AQUILA_ENGINE_GRAPHICS_RENDER_MESH_H

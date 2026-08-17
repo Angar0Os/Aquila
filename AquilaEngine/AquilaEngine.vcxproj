@@ -209,8 +209,10 @@
     <ClCompile Include="src\core\input\system\inputSystem_Win32_impl.cpp" />
     <ClCompile Include="src\core\input\utils\input_converters.cpp" />
     <ClCompile Include="src\core\window.cpp" />
+    <ClCompile Include="src\graphics\render\materialLibrary.cpp" />
     <ClCompile Include="src\graphics\render\mesh.cpp" />
     <ClCompile Include="src\graphics\render\renderer.cpp" />
+    <ClCompile Include="src\graphics\render\textureLibrary.cpp" />
     <ClCompile Include="src\loaders\meshLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -234,8 +236,11 @@
     <ClInclude Include="include\core\input\utils\keys.h" />
     <ClInclude Include="include\core\window.h" />
     <ClInclude Include="include\graphics\render\material.h" />
+    <ClInclude Include="include\graphics\render\materialGPUData.h" />
+    <ClInclude Include="include\graphics\render\materialLibrary.h" />
     <ClInclude Include="include\graphics\render\mesh.h" />
     <ClInclude Include="include\graphics\render\renderer.h" />
+    <ClInclude Include="include\graphics\render\textureLibrary.h" />
     <ClInclude Include="include\loaders\meshLoader.h" />
     <ClInclude Include="include\loaders\shaderLoader.h" />
     <ClInclude Include="src\audio\audioSystem_impl.h" />

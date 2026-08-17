@@ -34,9 +34,6 @@ RWTexture2D<float4> gGIOutput;
 [[vk::binding(7, 0)]]
 Sampler2D gGIHistory;
 
-[[vk::binding(8, 0)]]
-StructuredBuffer<float4> gInstanceColors;
-
 [[vk::binding(9, 0)]]
 Sampler2D gEnvironmentRaw;
 
@@ -54,11 +51,9 @@ struct MeshTableEntry
 struct GPUMaterial
 {
     float4 baseColor;
-    float4 params;      
-    uint   albedoTexIndex;
-    uint   normalTexIndex;
-    uint   roughMetalTexIndex;
-    uint   _pad0;
+    float4 emissive;
+    float4 properties;
+    uint4  textures;
 };
 
 [[vk::binding(10, 0)]]
@@ -83,6 +78,7 @@ cbuffer GIPushConstants
 };
 
 static const float PI = 3.14159265f;
+static const float SURFACE_BIAS = 0.2f;
 
 float3 ReconstructPosition(float2 uv, float depth)
 {
@@ -162,6 +158,7 @@ struct HitSurface
 {
     float3 position;
     float3 normal;
+    float3 geometricNormal;
     float2 uv;
     GPUMaterial material;
 };
@@ -198,27 +195,25 @@ HitSurface GetHitSurface(uint meshTableIndex, uint primitiveIndex, float2 baryce
     float2 uv1 = LoadVertexFloat2(meshEntry.uvs, tri.y, meshEntry.vertexStride);
     float2 uv2 = LoadVertexFloat2(meshEntry.uvs, tri.z, meshEntry.vertexStride);
 
+    float3 p0 = LoadVertexFloat3(meshEntry.positions, tri.x, meshEntry.vertexStride);
+    float3 p1 = LoadVertexFloat3(meshEntry.positions, tri.y, meshEntry.vertexStride);
+    float3 p2 = LoadVertexFloat3(meshEntry.positions, tri.z, meshEntry.vertexStride);
+
     float3 baryWeights = float3(1.0f - barycentrics.x - barycentrics.y, barycentrics.x, barycentrics.y);
 
     HitSurface surface;
-    surface.normal   = normalize(n0 * baryWeights.x + n1 * baryWeights.y + n2 * baryWeights.z);
-    surface.uv       = uv0 * baryWeights.x + uv1 * baryWeights.y + uv2 * baryWeights.z;
-    surface.material = gMaterialTable[meshEntry.materialId];
+    surface.geometricNormal = normalize(cross(p1 - p0, p2 - p0));
+    surface.normal          = normalize(n0 * baryWeights.x + n1 * baryWeights.y + n2 * baryWeights.z);
+    surface.uv              = uv0 * baryWeights.x + uv1 * baryWeights.y + uv2 * baryWeights.z;
+    surface.material        = gMaterialTable[meshEntry.materialId];
 
     return surface;
 }
 
 float3 SampleMaterialAlbedo(GPUMaterial mat, float2 uv)
 {
-    float3 albedo = mat.baseColor.rgb;
-
-    bool hasAlbedoTex = mat.params.z > 0.5f;
-    if (hasAlbedoTex)
-    {
-        albedo *= gBindlessTextures[NonUniformResourceIndex(mat.albedoTexIndex)].SampleLevel(uv, 0).rgb;
-    }
-
-    return albedo;
+    float3 texSample = gBindlessTextures[NonUniformResourceIndex(mat.textures.x)].SampleLevel(uv, 0).rgb;
+    return mat.baseColor.rgb * texSample;
 }
 
 float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
@@ -236,8 +231,8 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         RayDesc ray;
         ray.Origin = rayOrigin;
         ray.Direction = rayDir;
-        ray.TMin = 0.001f;
-        ray.TMax = maxDistance;
+        ray.TMin = 0.05f;
+        ray.TMax = maxDistance - 0.05;
 
         RayQuery<RAY_FLAG_NONE> q;
         q.TraceRayInline(gTLAS, RAY_FLAG_NONE, 0xFF, ray);
@@ -246,7 +241,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         if (q.CommittedStatus() == COMMITTED_NOTHING)
         {
             float2 envUV = DirectionToEquirectUV(rayDir);
-            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb;
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb * 0.1;
             break;
         }
 
@@ -259,13 +254,17 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         HitSurface surface = GetHitSurface(meshTableIndex, primitiveIndex, barycentrics);
 
         float3 hitNormal = surface.normal;
+        float3 geoNormal = surface.geometricNormal;
 
         if (dot(hitNormal, rayDir) > 0.0f)
             hitNormal = -hitNormal;
 
+        if (dot(geoNormal, rayDir) > 0.0f) 
+            geoNormal = -geoNormal;
+
         float3 approxAlbedo = SampleMaterialAlbedo(surface.material, surface.uv);
 
-        bool occluded = TraceOcclusion(hitPos + hitNormal * 0.01f, sunDirection, maxDistance);
+        bool occluded = TraceOcclusion(hitPos + geoNormal * SURFACE_BIAS, sunDirection, maxDistance);
         if (!occluded)
         {
             float NdotL = max(dot(hitNormal, sunDirection), 0.0f);
@@ -281,7 +280,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         float cosTerm = max(dot(hitNormal, newDir), 0.0f);
         throughput *= (brdf * cosTerm) / pdf;
 
-        rayOrigin = hitPos + hitNormal * 0.01f;
+        rayOrigin = hitPos + geoNormal * SURFACE_BIAS;
         rayDir = newDir;
     }
 
@@ -313,7 +312,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float3 N        = normalize(gNormal.SampleLevel(uv, 0).xyz * 2.0f - 1.0f);
     float3 albedo   = gAlbedo.SampleLevel(uv, 0).rgb;
 
-    float3 origin = worldPos + N * 0.01f;
+    float3 origin = worldPos + N * SURFACE_BIAS;
 
     uint seed = Hash(pixel.x + Hash(pixel.y + Hash(gGIConstants.frameCount)));
 

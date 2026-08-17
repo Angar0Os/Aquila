@@ -13,6 +13,7 @@ namespace core::gpu::utils
 		Spot
 	};
 
+	enum class ETextureFilter { Linear, Nearest };
 
 	enum class ETextureFormat
 

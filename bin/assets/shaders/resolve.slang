@@ -128,7 +128,7 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
         direct += albedo * light.color * light.intensity * pointNdotL * attenuation;
     }
 
-    float3 hdrResult = direct + gi;
+    float3 hdrResult = gi * direct;
     float3 ldrResult = ACESFilm(hdrResult, exposure);
 
     outImage[coord] = float4(ldrResult, 1.0);

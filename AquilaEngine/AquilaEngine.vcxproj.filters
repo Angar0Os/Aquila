@@ -144,6 +144,12 @@
     <ClCompile Include="src\audio\audioSystem.cpp">
       <Filter>Source Files\audio</Filter>
     </ClCompile>
+    <ClCompile Include="src\graphics\render\textureLibrary.cpp">
+      <Filter>Source Files\graphics\render</Filter>
+    </ClCompile>
+    <ClCompile Include="src\graphics\render\materialLibrary.cpp">
+      <Filter>Source Files\graphics\render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\core\window.h">
@@ -259,6 +265,15 @@
     </ClInclude>
     <ClInclude Include="src\audio\audioSystem_impl.h">
       <Filter>Source Files\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\render\textureLibrary.h">
+      <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\render\materialGPUData.h">
+      <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
+    <ClInclude Include="include\graphics\render\materialLibrary.h">
+      <Filter>Header Files\graphics\render</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

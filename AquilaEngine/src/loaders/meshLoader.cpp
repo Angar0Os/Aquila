@@ -1,6 +1,9 @@
 #include <loaders/meshLoader.h>
 
 #include <graphics/render/mesh.h>
+#include <graphics/render/material.h>
+#include <graphics/render/materialLibrary.h>
+#include <graphics/render/textureLibrary.h>
 
 #include <core/gpu/device.h>
 
@@ -11,541 +14,545 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include <algorithm>
-#include <stdexcept>
 #include <filesystem>
 #include <iostream>
+#include <stdexcept>
+#include <unordered_map>
+#include <vector>
 
 using namespace loaders;
+using namespace graphics::render;
 
-std::pair<std::unique_ptr<core::gpu::Image>, std::unique_ptr<core::gpu::Texture>> s_LoadTexture(
-	const core::gpu::Device& _device,
-	const tinygltf::Model& _model,
-	int _textureIndex,
-	core::gpu::utils::ETextureFormat _format)
+TextureHandle s_LoadTexture(
+    const tinygltf::Model& _model,
+    int _textureIndex,
+    TextureLibrary& _textureLibrary,
+    ETextureSemantic _semantic,
+    const std::string& _path)
 {
-	if (_textureIndex < 0)
-		return { nullptr, nullptr };
+    if (_textureIndex < 0)
+        return INVALID_TEXTURE;
 
-	const tinygltf::Texture& tex = _model.textures[_textureIndex];
-	if (tex.source < 0)
-		return { nullptr, nullptr };
+    if (_textureIndex >= static_cast<int>(_model.textures.size()))
+    {
+        std::cerr << "Invalid GLTF texture index: " << _textureIndex << "\n";
+        return INVALID_TEXTURE;
+    }
 
-	const tinygltf::Image& img = _model.images[tex.source];
+    const tinygltf::Texture& texture = _model.textures[_textureIndex];
 
-	if (img.image.empty())
-	{
-		std::cerr << "GLTF texture has no decoded pixel data: " << img.uri << "\n";
-		return { nullptr, nullptr };
-	}
+    if (texture.source < 0)
+        return INVALID_TEXTURE;
 
-	const size_t pixelCount = static_cast<size_t>(img.width) * img.height;
-	std::vector<uint8_t> rgba;
+    if (texture.source >= static_cast<int>(_model.images.size()))
+    {
+        std::cerr << "Invalid GLTF image index: " << texture.source << "\n";
+        return INVALID_TEXTURE;
+    }
 
-	if (img.component == 4)
-	{
-		rgba.assign(img.image.begin(), img.image.end());
-	}
-	else if (img.component == 3)
-	{
-		rgba.resize(pixelCount * 4);
-		for (size_t p = 0; p < pixelCount; ++p)
-		{
-			rgba[p * 4 + 0] = img.image[p * 3 + 0];
-			rgba[p * 4 + 1] = img.image[p * 3 + 1];
-			rgba[p * 4 + 2] = img.image[p * 3 + 2];
-			rgba[p * 4 + 3] = 255;
-		}
-	}
-	else
-	{
-		std::cerr << "Unsupported GLTF image component count (" << img.component << ") for: " << img.uri << "\n";
-		return { nullptr, nullptr };
-	}
+    const tinygltf::Image& image = _model.images[texture.source];
 
-	return graphics::render::Material::CreateTexture(
-		_device, rgba.data(),
-		static_cast<uint32_t>(img.width),
-		static_cast<uint32_t>(img.height),
-		_format
-	);
+    if (image.image.empty())
+    {
+        std::cerr << "GLTF texture has no decoded pixel data: " << image.uri << "\n";
+        return INVALID_TEXTURE;
+    }
+
+    const size_t pixelCount = static_cast<size_t>(image.width) * static_cast<size_t>(image.height);
+    std::vector<uint8_t> rgba;
+
+    if (image.component == 4)
+    {
+        rgba.assign(image.image.begin(), image.image.end());
+    }
+    else if (image.component == 3)
+    {
+        rgba.resize(pixelCount * 4);
+
+        for (size_t p = 0; p < pixelCount; ++p)
+        {
+            rgba[p * 4 + 0] = image.image[p * 3 + 0];
+            rgba[p * 4 + 1] = image.image[p * 3 + 1];
+            rgba[p * 4 + 2] = image.image[p * 3 + 2];
+            rgba[p * 4 + 3] = 255;
+        }
+    }
+    else
+    {
+        std::cerr << "Unsupported GLTF image component count (" << image.component << ") for: " << image.uri << "\n";
+        return INVALID_TEXTURE;
+    }
+
+    std::string textureName;
+
+    if (!image.uri.empty())
+    {
+        textureName = _path + "::" + image.uri;
+    }
+    else
+    {
+        textureName = _path + "::gltf_image_" + std::to_string(texture.source);
+    }
+
+    if (auto existing = _textureLibrary.Find(textureName); existing != INVALID_TEXTURE)
+        return existing;
+
+    return _textureLibrary.AddFromPixels(
+        textureName,
+        rgba.data(),
+        static_cast<uint32_t>(image.width),
+        static_cast<uint32_t>(image.height),
+        _semantic
+    );
 }
 
-std::unique_ptr<graphics::render::Material> s_LoadMaterial(
-	const core::gpu::Device& _device,
-	const core::gpu::DescriptorSetLayout& _materialLayout,
-	const tinygltf::Model& _model,
-	const tinygltf::Material& _gltfMat)
+MaterialHandle s_LoadMaterial(
+    const tinygltf::Model& _model,
+    const tinygltf::Material& _gltfMat,
+    TextureLibrary& _textureLibrary,
+    MaterialLibrary& _materialLibrary,
+    const std::string& _path,
+    int _materialIndex)
 {
-	auto mat = std::make_unique<graphics::render::Material>(_device, _materialLayout);
-	mat->name = _gltfMat.name.empty() ? "material" : _gltfMat.name;
+    Material material;
 
-	const auto& pbr = _gltfMat.pbrMetallicRoughness;
+    material.name = _path + "::" + (_gltfMat.name.empty()
+        ? ("material_" + std::to_string(_materialIndex))
+        : _gltfMat.name);
 
-	mat->albedoColor = glm::vec3(pbr.baseColorFactor[0], pbr.baseColorFactor[1], pbr.baseColorFactor[2]);
-	mat->metalness = static_cast<float>(pbr.metallicFactor);
-	mat->roughnessValue = static_cast<float>(pbr.roughnessFactor);
+    const auto& pbr = _gltfMat.pbrMetallicRoughness;
 
-	mat->SetBaseColor(glm::vec4(mat->albedoColor, static_cast<float>(pbr.baseColorFactor[3])));
-	mat->SetMetalness(mat->metalness);
-	mat->SetRoughness(mat->roughnessValue);
+    material.baseColor.value = glm::vec4(
+        static_cast<float>(pbr.baseColorFactor[0]),
+        static_cast<float>(pbr.baseColorFactor[1]),
+        static_cast<float>(pbr.baseColorFactor[2]),
+        static_cast<float>(pbr.baseColorFactor[3])
+    );
 
-	if (auto [img, tex] = s_LoadTexture(_device, _model, pbr.baseColorTexture.index, core::gpu::utils::ETextureFormat::RGBA8_SRGB); tex)
-	{
-		mat->hasAlbedoTexture = true;
-		mat->SetAlbedo(_device, std::move(img), std::move(tex));
-	}
-	else
-	{
-		uint8_t pixel[4] = { 255, 255, 255, 255 };
+    material.metallic.value = static_cast<float>(pbr.metallicFactor);
+    material.roughness.value = static_cast<float>(pbr.roughnessFactor);
 
-		auto [img2, tex2] = graphics::render::Material::CreateTexture(_device, pixel, 1u, 1u, core::gpu::utils::ETextureFormat::RGBA8_SRGB);
+    if (pbr.baseColorTexture.index >= 0)
+    {
+        material.baseColor.texture = s_LoadTexture(
+            _model,
+            pbr.baseColorTexture.index,
+            _textureLibrary,
+            ETextureSemantic::BaseColor,
+            _path
+        );
+    }
 
-		mat->hasAlbedoTexture = false;
-		mat->SetAlbedo(_device, std::move(img2), std::move(tex2));
-	}
+    if (_gltfMat.normalTexture.index >= 0)
+    {
+        material.normal.texture = s_LoadTexture(
+            _model,
+            _gltfMat.normalTexture.index,
+            _textureLibrary,
+            ETextureSemantic::Normal,
+            _path
+        );
+    }
 
-	if (auto [img, tex] = s_LoadTexture(_device, _model, _gltfMat.normalTexture.index, core::gpu::utils::ETextureFormat::RGBA8_UNorm); tex)
-	{
-		mat->hasNormalTexture = true;
-		mat->SetNormal(_device, std::move(img), std::move(tex));
-	}
+    if (pbr.metallicRoughnessTexture.index >= 0)
+    {
+        material.ormTexture = s_LoadTexture(
+            _model,
+            pbr.metallicRoughnessTexture.index,
+            _textureLibrary,
+            ETextureSemantic::ORM,
+            _path
+        );
+    }
 
-	if (auto [img, tex] = s_LoadTexture(_device, _model, pbr.metallicRoughnessTexture.index, core::gpu::utils::ETextureFormat::RGBA8_UNorm); tex)
-	{
-		mat->hasRoughnessMetalTexture = true;
-		mat->SetRoughnessMetal(_device, std::move(img), std::move(tex));
-	}
+    if (_gltfMat.emissiveTexture.index >= 0)
+    {
+        material.emissive.texture = s_LoadTexture(
+            _model,
+            _gltfMat.emissiveTexture.index,
+            _textureLibrary,
+            ETextureSemantic::Emissive,
+            _path
+        );
+    }
 
-	return mat;
+    material.emissive.value = glm::vec3(
+        static_cast<float>(_gltfMat.emissiveFactor[0]),
+        static_cast<float>(_gltfMat.emissiveFactor[1]),
+        static_cast<float>(_gltfMat.emissiveFactor[2])
+    );
+
+    const std::string materialName = material.name;
+
+    std::cout << "  material '" << material.name << "' baseColorFactor=("
+        << pbr.baseColorFactor[0] << ", " << pbr.baseColorFactor[1] << ", "
+        << pbr.baseColorFactor[2] << ", " << pbr.baseColorFactor[3] << ")\n";
+
+    return _materialLibrary.Add(materialName, std::move(material));
 }
 
-std::unique_ptr<graphics::render::Mesh> loaders::MeshLoader::LoadGLTF(
-	const core::gpu::Device& _device,
-	const std::string& _path,
-	const core::gpu::DescriptorSetLayout& _materialLayout)
+std::unique_ptr<Mesh> s_BuildMesh(
+    const core::gpu::Device& _device,
+    const tinygltf::Model& _model,
+    const tinygltf::Mesh& _gltfMesh,
+    TextureLibrary& _textureLibrary,
+    MaterialLibrary& _materialLibrary,
+    const std::string& _path)
 {
-	std::string ext = std::filesystem::path(_path).extension().string();
-	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-	if (ext != ".gltf" && ext != ".glb")
-		throw std::runtime_error("Unsupported mesh format: " + _path);
+    MeshInstance instance;
+    instance.path = _path;
+    instance.name = _gltfMesh.name.empty() ? "mesh" : _gltfMesh.name;
 
-	tinygltf::Model    model;
-	tinygltf::TinyGLTF loader;
-	std::string        err, warn;
-	bool               ret = false;
+    std::unordered_map<Vertex, uint32_t> uniqueVertices;
 
-	if (ext == ".gltf")
-		ret = loader.LoadASCIIFromFile(&model, &err, &warn, _path);
-	else
-		ret = loader.LoadBinaryFromFile(&model, &err, &warn, _path);
+    for (size_t primIdx = 0; primIdx < _gltfMesh.primitives.size(); ++primIdx)
+    {
+        const tinygltf::Primitive& prim = _gltfMesh.primitives[primIdx];
 
-	if (!warn.empty()) std::cerr << "GLTF Warning: " << warn << "\n";
-	if (!err.empty())  std::cerr << "GLTF Error: " << err << "\n";
-	if (!ret)          throw std::runtime_error("Failed to load GLTF: " + _path);
+        const uint32_t submeshFirstIndex = static_cast<uint32_t>(instance.indices.size());
 
-	if (model.meshes.empty())
-		throw std::runtime_error("GLTF contains no meshes");
+        auto getFloatVec = [&](const std::string& name, int elementSize) -> std::vector<float>
+            {
+                auto attrIt = prim.attributes.find(name);
 
-	const tinygltf::Mesh& gltfMesh = model.meshes[0];
-	if (gltfMesh.primitives.empty())
-		throw std::runtime_error("GLTF mesh contains no primitives");
+                if (attrIt == prim.attributes.end())
+                    return {};
 
-	std::cout << "Model has " << model.meshes.size() << " meshes total\n";
+                const tinygltf::Accessor& accessor = _model.accessors[attrIt->second];
+                const tinygltf::BufferView& bufferView = _model.bufferViews[accessor.bufferView];
+                const tinygltf::Buffer& buffer = _model.buffers[bufferView.buffer];
 
-	std::cout << "Loading GLTF mesh '" << gltfMesh.name
-		<< "' with " << gltfMesh.primitives.size() << " primitives\n";
+                const size_t offset = bufferView.byteOffset + accessor.byteOffset;
 
-	graphics::render::MeshInstance instance;
-	instance.path = _path;
-	instance.name = gltfMesh.name.empty() ? "mesh" : gltfMesh.name;
+                const float* ptr = reinterpret_cast<const float*>(&buffer.data[offset]);
 
-	std::unordered_map<graphics::render::Vertex, uint32_t> uniqueVertices{};
+                return std::vector<float>(
+                    ptr,
+                    ptr + accessor.count * elementSize
+                );
+            };
 
-	for (size_t primIdx = 0; primIdx < gltfMesh.primitives.size(); ++primIdx)
-	{
-		const tinygltf::Primitive& prim = gltfMesh.primitives[primIdx];
+        std::vector<float> positions = getFloatVec("POSITION", 3);
+        std::vector<float> normals = getFloatVec("NORMAL", 3);
+        std::vector<float> uvs = getFloatVec("TEXCOORD_0", 2);
+        std::vector<float> tangents = getFloatVec("TANGENT", 4);
 
-		uint32_t submeshFirstIndex = static_cast<uint32_t>(instance.indices.size());
-		uint32_t submeshVertexOffset = static_cast<uint32_t>(instance.vertices.size());
+        if (positions.empty())
+            throw std::runtime_error("GLTF primitive has no POSITION attribute: " + _path);
 
-		auto getFloatVec = [&](const std::string& name, int elementSize) -> std::vector<float>
-			{
-				auto attrIt = prim.attributes.find(name);
-				if (attrIt == prim.attributes.end())
-					return {};
+        std::vector<uint32_t> primitiveIndices;
 
-				const tinygltf::Accessor& accessor = model.accessors[attrIt->second];
-				const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
-				const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+        if (prim.indices >= 0)
+        {
+            const tinygltf::Accessor& accessor = _model.accessors[prim.indices];
+            const tinygltf::BufferView& bufferView = _model.bufferViews[accessor.bufferView];
+            const tinygltf::Buffer& buffer = _model.buffers[bufferView.buffer];
 
-				const float* ptr = reinterpret_cast<const float*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				return std::vector<float>(ptr, ptr + accessor.count * elementSize);
-			};
+            const size_t offset = bufferView.byteOffset + accessor.byteOffset;
 
-		std::vector<float> positions = getFloatVec("POSITION", 3);
-		std::vector<float> normals = getFloatVec("NORMAL", 3);
-		std::vector<float> uvs = getFloatVec("TEXCOORD_0", 2);
-		std::vector<float> tangents = getFloatVec("TANGENT", 4);
+            primitiveIndices.resize(accessor.count);
 
-		if (positions.empty())
-			throw std::runtime_error("GLTF primitive has no POSITION attribute: " + _path);
+            if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+            {
+                const uint8_t* src = reinterpret_cast<const uint8_t*>(&buffer.data[offset]);
 
-		std::vector<uint32_t> primitiveIndices;
-		if (prim.indices >= 0)
-		{
-			const tinygltf::Accessor& accessor = model.accessors[prim.indices];
-			const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
-			const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+                for (size_t i = 0; i < accessor.count; ++i)
+                    primitiveIndices[i] = static_cast<uint32_t>(src[i]);
+            }
+            else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
+            {
+                const uint16_t* src = reinterpret_cast<const uint16_t*>(&buffer.data[offset]);
 
-			primitiveIndices.resize(accessor.count);
+                for (size_t i = 0; i < accessor.count; ++i)
+                    primitiveIndices[i] = static_cast<uint32_t>(src[i]);
+            }
+            else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
+            {
+                const uint32_t* src = reinterpret_cast<const uint32_t*>(&buffer.data[offset]);
 
-			if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-			{
-				const uint16_t* src = reinterpret_cast<const uint16_t*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				for (size_t i = 0; i < accessor.count; i++)
-					primitiveIndices[i] = static_cast<uint32_t>(src[i]);
-			}
-			else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-			{
-				const uint32_t* src = reinterpret_cast<const uint32_t*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				for (size_t i = 0; i < accessor.count; i++)
-					primitiveIndices[i] = src[i];
-			}
-			else
-			{
-				throw std::runtime_error("Unsupported index component type in GLTF: " + _path);
-			}
-		}
+                for (size_t i = 0; i < accessor.count; ++i)
+                    primitiveIndices[i] = src[i];
+            }
+            else
+            {
+                throw std::runtime_error("Unsupported index component type in GLTF: " + _path);
+            }
+        }
 
-		auto buildVertex = [&](size_t idx) -> graphics::render::Vertex
-			{
-				graphics::render::Vertex v{};
-				v.position = { positions[idx * 3 + 0], positions[idx * 3 + 1], positions[idx * 3 + 2] };
-				if (!normals.empty())
-					v.normal = { normals[idx * 3 + 0], normals[idx * 3 + 1], normals[idx * 3 + 2] };
-				if (!uvs.empty())
-					v.uv = { uvs[idx * 2 + 0], uvs[idx * 2 + 1] };
-				if (!tangents.empty())
-					v.tangent = { tangents[idx * 4 + 0], tangents[idx * 4 + 1],
-								  tangents[idx * 4 + 2], tangents[idx * 4 + 3] };
-				else
-					v.tangent = { 1.0f, 1.0f, 1.0f, 1.0f };
-				return v;
-			};
+        auto buildVertex = [&](size_t idx) -> Vertex
+            {
+                Vertex vertex{};
 
-		auto addVertex = [&](size_t idx)
-			{
-				graphics::render::Vertex v = buildVertex(idx);
-				auto it = uniqueVertices.find(v);
-				uint32_t vertexIndex;
-				if (it == uniqueVertices.end())
-				{
-					vertexIndex = static_cast<uint32_t>(instance.vertices.size());
-					uniqueVertices[v] = vertexIndex;
-					instance.vertices.push_back(v);
-				}
-				else
-				{
-					vertexIndex = it->second;
-				}
-				instance.indices.push_back(vertexIndex);
-			};
+                vertex.position = {
+                    positions[idx * 3 + 0],
+                    positions[idx * 3 + 1],
+                    positions[idx * 3 + 2]
+                };
 
-		if (!primitiveIndices.empty())
-		{
-			for (auto idx : primitiveIndices)
-				addVertex(idx);
-		}
-		else
-		{
-			for (size_t i = 0; i < positions.size() / 3; i++)
-				addVertex(i);
-		}
+                if (!normals.empty())
+                {
+                    vertex.normal = {
+                        normals[idx * 3 + 0],
+                        normals[idx * 3 + 1],
+                        normals[idx * 3 + 2]
+                    };
+                }
 
-		graphics::render::SubMesh submesh;
-		submesh.firstIndex = submeshFirstIndex;
-		submesh.indexCount = static_cast<uint32_t>(instance.indices.size() - submeshFirstIndex);
-		submesh.vertexOffset = 0;
-		submesh.materialIndex = (prim.material >= 0) ? static_cast<uint32_t>(prim.material) : 0;
-		submesh.name = "primitive_" + std::to_string(primIdx);
+                if (!uvs.empty())
+                {
+                    vertex.uv = {
+                        uvs[idx * 2 + 0],
+                        uvs[idx * 2 + 1]
+                    };
+                }
 
-		instance.subMeshes.push_back(submesh);
-	}
+                if (!tangents.empty())
+                {
+                    vertex.tangent = {
+                        tangents[idx * 4 + 0],
+                        tangents[idx * 4 + 1],
+                        tangents[idx * 4 + 2],
+                        tangents[idx * 4 + 3]
+                    };
+                }
+                else
+                {
+                    vertex.tangent = {
+                        1.0f,
+                        0.0f,
+                        0.0f,
+                        1.0f
+                    };
+                }
 
-	auto mesh = std::make_unique<graphics::render::Mesh>(_device, instance);
+                return vertex;
+            };
 
-	mesh->ownedMaterials.reserve(model.materials.size());
-	for (const auto& gltfMat : model.materials)
-		mesh->ownedMaterials.push_back(s_LoadMaterial(_device, _materialLayout, model, gltfMat));
+        auto addVertex = [&](size_t idx)
+            {
+                Vertex vertex = buildVertex(idx);
 
-	mesh->materials.reserve(mesh->ownedMaterials.size());
-	for (auto& m : mesh->ownedMaterials)
-		mesh->materials.push_back(m.get());
+                auto it = uniqueVertices.find(vertex);
 
-	return mesh;
+                uint32_t vertexIndex;
+
+                if (it == uniqueVertices.end())
+                {
+                    vertexIndex = static_cast<uint32_t>(instance.vertices.size());
+
+                    uniqueVertices.emplace(vertex, vertexIndex);
+                    instance.vertices.push_back(vertex);
+                }
+                else
+                {
+                    vertexIndex = it->second;
+                }
+
+                instance.indices.push_back(vertexIndex);
+            };
+
+        if (!primitiveIndices.empty())
+        {
+            for (uint32_t index : primitiveIndices)
+                addVertex(index);
+        }
+        else
+        {
+            for (size_t i = 0; i < positions.size() / 3; ++i)
+                addVertex(i);
+        }
+
+        SubMesh submesh;
+
+        submesh.name = "primitive_" + std::to_string(primIdx);
+        submesh.firstIndex = submeshFirstIndex;
+        submesh.indexCount = static_cast<uint32_t>(instance.indices.size()) - submeshFirstIndex;
+        submesh.vertexOffset = 0;
+
+        if (prim.material >= 0 && prim.material < static_cast<int>(_model.materials.size()))
+        {
+            submesh.material = s_LoadMaterial(
+                _model,
+                _model.materials[prim.material],
+                _textureLibrary,
+                _materialLibrary,
+                _path,
+                prim.material
+            );
+        }
+        else
+        {
+            submesh.material = _materialLibrary.GetDefaultMaterial();
+        }
+
+        instance.subMeshes.push_back(submesh);
+        std::cout << "  submesh '" << submesh.name << "' -> materialHandle=" << submesh.material
+            << (submesh.material == _materialLibrary.GetDefaultMaterial() ? " (DEFAULT/FALLBACK)" : " (assigned)")
+            << "\n";
+    }
+
+    return std::make_unique<Mesh>(
+        _device,
+        std::move(instance)
+    );
 }
 
 glm::mat4 s_NodeLocalTransform(const tinygltf::Node& _node)
 {
-	if (_node.matrix.size() == 16)
-		return glm::make_mat4(_node.matrix.data());
+    if (_node.matrix.size() == 16)
+        return glm::make_mat4(_node.matrix.data());
 
-	glm::mat4 t(1.0f), r(1.0f), s(1.0f);
+    glm::mat4 t(1.0f);
+    glm::mat4 r(1.0f);
+    glm::mat4 s(1.0f);
 
-	if (_node.translation.size() == 3)
-		t = glm::translate(glm::mat4(1.0f), glm::vec3(
-			_node.translation[0], _node.translation[1], _node.translation[2]));
+    if (_node.translation.size() == 3)
+    {
+        t = glm::translate(
+            glm::mat4(1.0f),
+            glm::vec3(
+                static_cast<float>(_node.translation[0]),
+                static_cast<float>(_node.translation[1]),
+                static_cast<float>(_node.translation[2])
+            )
+        );
+    }
 
-	if (_node.rotation.size() == 4)
-	{
-		glm::quat q(
-			static_cast<float>(_node.rotation[3]),
-			static_cast<float>(_node.rotation[0]),
-			static_cast<float>(_node.rotation[1]),
-			static_cast<float>(_node.rotation[2]) 
-		);
-		r = glm::mat4_cast(q);
-	}
+    if (_node.rotation.size() == 4)
+    {
+        glm::quat q(
+            static_cast<float>(_node.rotation[3]),
+            static_cast<float>(_node.rotation[0]),
+            static_cast<float>(_node.rotation[1]),
+            static_cast<float>(_node.rotation[2])
+        );
 
-	if (_node.scale.size() == 3)
-		s = glm::scale(glm::mat4(1.0f), glm::vec3(
-			_node.scale[0], _node.scale[1], _node.scale[2]));
+        r = glm::mat4_cast(q);
+    }
 
-	return t * r * s;
+    if (_node.scale.size() == 3)
+    {
+        s = glm::scale(
+            glm::mat4(1.0f),
+            glm::vec3(
+                static_cast<float>(_node.scale[0]),
+                static_cast<float>(_node.scale[1]),
+                static_cast<float>(_node.scale[2])
+            )
+        );
+    }
+
+    return t * r * s;
 }
 
 struct MeshNode
 {
-	int       meshIndex;
-	glm::mat4 worldTransform;
+    int meshIndex;
+    glm::mat4 worldTransform;
 };
 
 void s_CollectMeshNodes(
-	const tinygltf::Model& _model,
-	int _nodeIndex,
-	const glm::mat4& _parentTransform,
-	std::vector<MeshNode>& _out)
+    const tinygltf::Model& _model,
+    int _nodeIndex,
+    const glm::mat4& _parentTransform,
+    std::vector<MeshNode>& _out)
 {
-	const tinygltf::Node& node = _model.nodes[_nodeIndex];
-	glm::mat4 worldTransform = _parentTransform * s_NodeLocalTransform(node);
+    const tinygltf::Node& node = _model.nodes[_nodeIndex];
 
-	if (node.mesh >= 0)
-		_out.push_back({ node.mesh, worldTransform });
+    const glm::mat4 worldTransform =
+        _parentTransform * s_NodeLocalTransform(node);
 
-	for (int child : node.children)
-		s_CollectMeshNodes(_model, child, worldTransform, _out);
+    if (node.mesh >= 0)
+        _out.push_back({ node.mesh, worldTransform });
+
+    for (int child : node.children)
+        s_CollectMeshNodes(
+            _model,
+            child,
+            worldTransform,
+            _out
+        );
 }
 
-std::unique_ptr<graphics::render::Mesh> s_BuildMesh(
-	const core::gpu::Device& _device,
-	const tinygltf::Model& _model,
-	const tinygltf::Mesh& _gltfMesh,
-	const core::gpu::DescriptorSetLayout& _materialLayout,
-	const std::string& _path)
+std::vector<std::unique_ptr<Mesh>> MeshLoader::LoadGLTF(
+    const core::gpu::Device& _device,
+    const std::string& _path,
+    TextureLibrary& _textureLibrary,
+    MaterialLibrary& _materialLibrary)
 {
-	graphics::render::MeshInstance instance;
-	instance.path = _path;
-	instance.name = _gltfMesh.name.empty() ? "mesh" : _gltfMesh.name;
+    std::string ext = std::filesystem::path(_path).extension().string();
 
-	std::unordered_map<graphics::render::Vertex, uint32_t> uniqueVertices{};
-	bool needsFallbackMaterial = false;
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
 
-	for (size_t primIdx = 0; primIdx < _gltfMesh.primitives.size(); ++primIdx)
-	{
-		const tinygltf::Primitive& prim = _gltfMesh.primitives[primIdx];
+    if (ext != ".gltf" && ext != ".glb")
+        throw std::runtime_error("Unsupported mesh format: " + _path);
 
-		uint32_t submeshFirstIndex = static_cast<uint32_t>(instance.indices.size());
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
 
-		auto getFloatVec = [&](const std::string& name, int elementSize) -> std::vector<float>
-			{
-				auto attrIt = prim.attributes.find(name);
-				if (attrIt == prim.attributes.end())
-					return {};
+    std::string err;
+    std::string warn;
 
-				const tinygltf::Accessor& accessor = _model.accessors[attrIt->second];
-				const tinygltf::BufferView& bufferView = _model.bufferViews[accessor.bufferView];
-				const tinygltf::Buffer& buffer = _model.buffers[bufferView.buffer];
+    bool ret = false;
 
-				const float* ptr = reinterpret_cast<const float*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				return std::vector<float>(ptr, ptr + accessor.count * elementSize);
-			};
+    if (ext == ".gltf")
+    {
+        ret = loader.LoadASCIIFromFile(
+            &model,
+            &err,
+            &warn,
+            _path
+        );
+    }
+    else
+    {
+        ret = loader.LoadBinaryFromFile(
+            &model,
+            &err,
+            &warn,
+            _path
+        );
+    }
 
-		std::vector<float> positions = getFloatVec("POSITION", 3);
-		std::vector<float> normals = getFloatVec("NORMAL", 3);
-		std::vector<float> uvs = getFloatVec("TEXCOORD_0", 2);
-		std::vector<float> tangents = getFloatVec("TANGENT", 4);
+    if (!warn.empty())
+        std::cerr << "GLTF Warning: " << warn << "\n";
 
-		if (positions.empty())
-			throw std::runtime_error("GLTF primitive has no POSITION attribute: " + _path);
+    if (!err.empty())
+        std::cerr << "GLTF Error: " << err << "\n";
 
-		std::vector<uint32_t> primitiveIndices;
-		if (prim.indices >= 0)
-		{
-			const tinygltf::Accessor& accessor = _model.accessors[prim.indices];
-			const tinygltf::BufferView& bufferView = _model.bufferViews[accessor.bufferView];
-			const tinygltf::Buffer& buffer = _model.buffers[bufferView.buffer];
+    if (!ret)
+        throw std::runtime_error("Failed to load GLTF: " + _path);
 
-			primitiveIndices.resize(accessor.count);
+    if (model.meshes.empty())
+        throw std::runtime_error("GLTF contains no meshes");
 
-			if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
-			{
-				const uint16_t* src = reinterpret_cast<const uint16_t*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				for (size_t i = 0; i < accessor.count; i++)
-					primitiveIndices[i] = static_cast<uint32_t>(src[i]);
-			}
-			else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
-			{
-				const uint32_t* src = reinterpret_cast<const uint32_t*>(
-					&buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-				for (size_t i = 0; i < accessor.count; i++)
-					primitiveIndices[i] = src[i];
-			}
-			else
-			{
-				throw std::runtime_error("Unsupported index component type in GLTF: " + _path);
-			}
-		}
+    std::cout << "Model '" << _path << "' contains " << model.meshes.size() << " mesh(es)\n";
 
-		auto buildVertex = [&](size_t idx) -> graphics::render::Vertex
-			{
-				graphics::render::Vertex v{};
-				v.position = { positions[idx * 3 + 0], positions[idx * 3 + 1], positions[idx * 3 + 2] };
-				if (!normals.empty())
-					v.normal = { normals[idx * 3 + 0], normals[idx * 3 + 1], normals[idx * 3 + 2] };
-				if (!uvs.empty())
-					v.uv = { uvs[idx * 2 + 0], uvs[idx * 2 + 1] };
-				if (!tangents.empty())
-					v.tangent = { tangents[idx * 4 + 0], tangents[idx * 4 + 1],
-								  tangents[idx * 4 + 2], tangents[idx * 4 + 3] };
-				else
-					v.tangent = { 1.0f, 1.0f, 1.0f, 1.0f };
-				return v;
-			};
+    std::vector<std::unique_ptr<Mesh>> result;
+    result.reserve(model.meshes.size());
 
-		auto addVertex = [&](size_t idx)
-			{
-				graphics::render::Vertex v = buildVertex(idx);
-				auto it = uniqueVertices.find(v);
-				uint32_t vertexIndex;
-				if (it == uniqueVertices.end())
-				{
-					vertexIndex = static_cast<uint32_t>(instance.vertices.size());
-					uniqueVertices[v] = vertexIndex;
-					instance.vertices.push_back(v);
-				}
-				else
-				{
-					vertexIndex = it->second;
-				}
-				instance.indices.push_back(vertexIndex);
-			};
+    for (const tinygltf::Mesh& gltfMesh : model.meshes)
+    {
+        if (gltfMesh.primitives.empty())
+            continue;
 
-		if (!primitiveIndices.empty())
-		{
-			for (auto idx : primitiveIndices)
-				addVertex(idx);
-		}
-		else
-		{
-			for (size_t i = 0; i < positions.size() / 3; i++)
-				addVertex(i);
-		}
+        std::cout << "Loading GLTF mesh '" << gltfMesh.name << "' with " << gltfMesh.primitives.size() << " primitives\n";
 
-		graphics::render::SubMesh submesh;
-		submesh.firstIndex = submeshFirstIndex;
-		submesh.indexCount = static_cast<uint32_t>(instance.indices.size() - submeshFirstIndex);
-		submesh.vertexOffset = 0;
-		submesh.name = "primitive_" + std::to_string(primIdx);
+        result.push_back(
+            s_BuildMesh(
+                _device,
+                model,
+                gltfMesh,
+                _textureLibrary,
+                _materialLibrary,
+                _path
+            )
+        );
+    }
 
-		if (prim.material >= 0)
-		{
-			submesh.materialIndex = static_cast<uint32_t>(prim.material);
-		}
-		else
-		{
-			submesh.materialIndex = static_cast<uint32_t>(_model.materials.size());
-			needsFallbackMaterial = true;
-		}
-
-		instance.subMeshes.push_back(submesh);
-	}
-
-	auto mesh = std::make_unique<graphics::render::Mesh>(_device, instance);
-
-	mesh->ownedMaterials.reserve(_model.materials.size() + (needsFallbackMaterial ? 1 : 0));
-	for (const auto& gltfMat : _model.materials)
-		mesh->ownedMaterials.push_back(s_LoadMaterial(_device, _materialLayout, _model, gltfMat));
-
-	if (needsFallbackMaterial)
-		mesh->ownedMaterials.push_back(std::make_unique<graphics::render::Material>(_device, _materialLayout));
-
-	mesh->materials.reserve(mesh->ownedMaterials.size());
-	for (auto& m : mesh->ownedMaterials)
-		mesh->materials.push_back(m.get());
-
-	return mesh;
-}
-
-
-std::vector<graphics::render::SceneMeshInstance> loaders::MeshLoader::LoadGLTFScene(
-	const core::gpu::Device& _device,
-	const std::string& _path,
-	const core::gpu::DescriptorSetLayout& _materialLayout)
-{
-	std::string ext = std::filesystem::path(_path).extension().string();
-	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-
-	if (ext != ".gltf" && ext != ".glb")
-		throw std::runtime_error("Unsupported mesh format: " + _path);
-
-	tinygltf::Model    model;
-	tinygltf::TinyGLTF loader;
-	std::string        err, warn;
-	bool               ret = false;
-
-	if (ext == ".gltf")
-		ret = loader.LoadASCIIFromFile(&model, &err, &warn, _path);
-	else
-		ret = loader.LoadBinaryFromFile(&model, &err, &warn, _path);
-
-	if (!warn.empty()) std::cerr << "GLTF Warning: " << warn << "\n";
-	if (!err.empty())  std::cerr << "GLTF Error: " << err << "\n";
-	if (!ret)          throw std::runtime_error("Failed to load GLTF: " + _path);
-
-	std::vector<MeshNode> meshNodes;
-
-	if (!model.scenes.empty())
-	{
-		int sceneIndex = model.defaultScene >= 0 ? model.defaultScene : 0;
-		for (int rootNode : model.scenes[sceneIndex].nodes)
-			s_CollectMeshNodes(model, rootNode, glm::mat4(1.0f), meshNodes);
-	}
-	else
-	{
-		for (size_t i = 0; i < model.nodes.size(); ++i)
-			s_CollectMeshNodes(model, static_cast<int>(i), glm::mat4(1.0f), meshNodes);
-	}
-
-	std::cout << "GLTF scene '" << _path << "' contains " << meshNodes.size() << " mesh node(s)\n";
-
-	std::vector<graphics::render::SceneMeshInstance> result;
-	result.reserve(meshNodes.size());
-
-	for (const auto& node : meshNodes)
-	{
-		const tinygltf::Mesh& gltfMesh = model.meshes[node.meshIndex];
-		auto mesh = s_BuildMesh(_device, model, gltfMesh, _materialLayout, _path);
-
-		result.push_back({ std::move(mesh), node.worldTransform });
-	}
-
-	return result;
+    return result;
 }

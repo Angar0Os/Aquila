@@ -5,6 +5,10 @@
 #include <core/gpu/device.h>
 #include <core/gpu/utils/enums.h>
 
+#include <graphics/render/materialLibrary.h>
+#include <graphics/render/textureLibrary.h>
+
+
 #include <glm/glm.hpp>
 
 #include <memory>
@@ -50,6 +54,8 @@ namespace graphics::render
 	{
 		glm::mat4 model;
 		glm::mat4 prevModel;
+		uint32_t  materialId;
+		uint32_t  _pad[3] = { 0, 0, 0 };
 	};
 
 	struct ShadowPushConstants
@@ -79,16 +85,6 @@ namespace graphics::render
 		uintptr_t tangents;
 		uint32_t  materialId;
 		uint32_t  vertexStride;
-	};
-
-	struct GPUMaterial
-	{
-		glm::vec4 baseColor;
-		glm::vec4 params;
-		uint32_t  albedoTexIndex;
-		uint32_t  normalTexIndex;
-		uint32_t  roughMetalTexIndex;
-		uint32_t  _pad0;
 	};
 
 	struct GIPushConstants
@@ -142,6 +138,9 @@ namespace graphics::render
 		{
 			m_pointLights.push_back({ _position, _radius, _color, _intensity });
 		}
+
+		TextureLibrary& GetTextureLibrary() { return *m_textureLibrary; }
+		MaterialLibrary& GetMaterialLibrary() { return *m_materialLibrary; }
 
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	gBufferDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	shadowDsLayouts;
@@ -198,6 +197,12 @@ namespace graphics::render
 		void BuildTLAS();
 		void RebuildAccelerationStructures();
 
+		void SyncMaterialsAndTextures();
+
+		std::unique_ptr<TextureLibrary>              m_textureLibrary;
+		std::unique_ptr<MaterialLibrary>             m_materialLibrary;
+		std::unique_ptr<core::gpu::DescriptorSet>    materialDescriptorSet;
+
 		uint32_t RegisterBindlessTexture(const core::gpu::Texture& _texture);
 
 		const core::gpu::Device& m_device;
@@ -207,8 +212,6 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_resolvePipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_fxaaPipeline;
-
-		std::unique_ptr<graphics::render::Material> m_fallbackMaterial;
 
 		PassAttachment								m_envMap;
 		PassAttachment								m_irradianceMap;
@@ -237,7 +240,6 @@ namespace graphics::render
 
 		size_t											m_maxMeshesInTableBuffer = 0;
 		std::unique_ptr<core::gpu::Buffer>				m_meshTableBuffer = nullptr;
-		std::unique_ptr<core::gpu::Buffer>				m_materialTableBuffer = nullptr;
 
 		static constexpr uint32_t						MAX_MESHES = 256;
 		static constexpr uint32_t						MAX_MATERIALS = 512;

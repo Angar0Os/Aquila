@@ -1,6 +1,7 @@
 #include <graphics/render/renderer.h>
 #include <graphics/render/mesh.h>
 #include <graphics/render/material.h>
+#include <graphics/render/textureLibrary.h>
 
 #include <core/gpu/accelerationStructure.h>
 #include <core/gpu/buffer.h>
@@ -38,8 +39,8 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 	};
 
 	std::vector<core::gpu::PushConstantRange> pushConstants = {
-		{
-			.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Vertex),
+	{
+		.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Vertex | core::gpu::utils::EShaderStageFlags::Fragment),
 			.offset = 0,
 			.size = sizeof(GBufferPushConstants)
 		}
@@ -153,7 +154,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildFXAAPipeline()
 
 void Renderer::LoadEnvironmentMaps()
 {
-	m_envMap.image = graphics::render::Material::UploadHDRTexture(m_device, "assets/textures/skyboxes/citrus_1k.hdr");
+	m_envMap.image = TextureLibrary::LoadHDRImage(m_device, "assets/textures/skyboxes/citrus_1k.hdr");
 	m_envMap.texture = std::make_unique<core::gpu::Texture>(m_device, *m_envMap.image);
 
 	auto shaderCode = loaders::ReadFile("assets/shaders/irradiance_convolution.spv");
@@ -265,13 +266,6 @@ void Renderer::CreateUniformBuffers()
 		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
 	};
 	m_meshTableBuffer = std::make_unique<core::gpu::Buffer>(m_device, meshTableInfo);
-
-	core::gpu::BufferCreateInfo materialTableInfo{
-		.size = sizeof(GPUMaterial) * MAX_MATERIALS,
-		.usage = core::gpu::utils::EBufferUsage::StorageBuffer,
-		.memoryProperties = core::gpu::utils::EMemoryProperty::HostVisible | core::gpu::utils::EMemoryProperty::HostCoherent
-	};
-	m_materialTableBuffer = std::make_unique<core::gpu::Buffer>(m_device, materialTableInfo);
 }
 
 void Renderer::CreateAttachments()
@@ -302,7 +296,7 @@ void Renderer::CreateAttachments()
 		};
 
 		gBufferColorAttachments[i].image = std::make_unique<core::gpu::Image>(m_device, info);
-		gBufferColorAttachments[i].texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferColorAttachments[i].image);
+		gBufferColorAttachments[i].texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferColorAttachments[i].image, core::gpu::utils::ETextureFilter::Nearest);
 	}
 
 	core::gpu::ImageCreateInfo depthInfo
@@ -318,7 +312,7 @@ void Renderer::CreateAttachments()
 	};
 
 	gBufferDepthAttachment.image = std::make_unique<core::gpu::Image>(m_device, depthInfo);
-	gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image);
+	gBufferDepthAttachment.texture = std::make_unique<core::gpu::Texture>(m_device, *gBufferDepthAttachment.image, core::gpu::utils::ETextureFilter::Nearest);
 
 
 	core::gpu::ImageCreateInfo shadowInfo
@@ -590,7 +584,7 @@ void Renderer::CreateDescriptorSetLayout()
 		}
 	));
 
-	core::gpu::DescriptorSetLayoutBinding fxaaInputBinding {
+	core::gpu::DescriptorSetLayoutBinding fxaaInputBinding{
 		.binding = 0, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
 		.stageFlags = core::gpu::utils::EShaderStage::Compute
 	};
@@ -608,34 +602,25 @@ void Renderer::CreateDescriptorSetLayout()
 
 void Renderer::CreateMaterialLayout()
 {
-	core::gpu::DescriptorSetLayoutBinding materialUBOBinding{
+	core::gpu::DescriptorSetLayoutBinding materialBufferBinding{
 		.binding = 0,
-		.descriptorType = core::gpu::utils::EDescriptorType::UniformBuffer,
+		.descriptorType = core::gpu::utils::EDescriptorType::StorageBuffer,
 		.stageFlags = core::gpu::utils::EShaderStage::Fragment
 	};
 
-	core::gpu::DescriptorSetLayoutBinding albedoBinding{
+	core::gpu::DescriptorSetLayoutBinding bindlessTexturesBinding{
 		.binding = 1,
+		.descriptorCount = MAX_BINDLESS_TEXTURES,
 		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags = core::gpu::utils::EShaderStage::Fragment
-	};
-
-	core::gpu::DescriptorSetLayoutBinding normalBinding{
-		.binding = 2,
-		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags = core::gpu::utils::EShaderStage::Fragment
-	};
-
-	core::gpu::DescriptorSetLayoutBinding roughMetalBinding{
-		.binding = 3,
-		.descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
-		.stageFlags = core::gpu::utils::EShaderStage::Fragment
+		.stageFlags = core::gpu::utils::EShaderStage::Fragment,
+		.partiallyBound = true,
+		.updateAfterBind = true
 	};
 
 	materialLayout = std::make_unique<core::gpu::DescriptorSetLayout>(
 		m_device,
 		core::gpu::DescriptorSetLayoutCreateInfo{
-			.bindings = { materialUBOBinding, albedoBinding, normalBinding, roughMetalBinding }
+			.bindings = { materialBufferBinding, bindlessTexturesBinding }
 		}
 	);
 }
@@ -707,7 +692,7 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(7, *giColorAttachments[1].texture);
 		ds->Bind(9, *m_envMap.texture);
 		ds->Bind(10, *m_meshTableBuffer);
-		ds->Bind(11, *m_materialTableBuffer);
+		ds->Bind(11, m_materialLibrary->GetGPUBuffer());
 		ds->Update(m_device);
 
 		giDescriptorSets.push_back(std::move(ds));
@@ -744,6 +729,10 @@ void Renderer::CreateDescriptorSets()
 		ds->Update(m_device);
 		fxaaDescriptorSets.push_back(std::move(ds));
 	}
+
+	materialDescriptorSet = std::make_unique<core::gpu::DescriptorSet>(m_device, *materialLayout);
+	materialDescriptorSet->Bind(0, m_materialLibrary->GetGPUBuffer());
+	materialDescriptorSet->Update(m_device);
 }
 
 void Renderer::UpdateDescriptorSets()
@@ -775,6 +764,10 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	CreateUniformBuffers();
 	LoadEnvironmentMaps();
 
+	m_textureLibrary = std::make_unique<TextureLibrary>(m_device);
+	m_materialLibrary = std::make_unique<MaterialLibrary>(m_device, *m_textureLibrary);
+	m_materialLibrary->UploadGPUData();
+
 	CreateAttachments();
 	CreateDescriptorSetLayout();
 	CreateMaterialLayout();
@@ -785,16 +778,16 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	m_resolvePipeline = BuildResolvePipeline();
 	m_fxaaPipeline = BuildFXAAPipeline();
 
-	m_fallbackMaterial = std::make_unique<graphics::render::Material>(m_device, *materialLayout);
 	CreateFallbackTLAS();
-
 	CreateDescriptorSets();
-	
-	m_cameraPosition = glm::vec3(2.0f, 1.0f, 5.0f);
+
+	SyncMaterialsAndTextures();
+
+	m_cameraPosition = glm::vec3(2.0f, 2.5f, 8.5f);
 
 	m_viewMatrix = glm::lookAt(
 		m_cameraPosition,
-		glm::vec3(1.5f, 0.35f, 2.0f),
+		glm::vec3(3.5f, 1.0f, 2.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 
@@ -808,6 +801,7 @@ Renderer::~Renderer() = default;
 void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outputImage)
 {
 	m_tlasPerFrame.resize(m_device.FRAMES_IN_FLIGHT);
+	SyncMaterialsAndTextures();
 
 	BuildTLAS();
 	RebuildAccelerationStructures();
@@ -920,6 +914,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.BeginRendering(m_device, colorInfos, depthInfo);
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_gBufferPipeline);
 	_cmdBuf.Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
+	_cmdBuf.Bind(*materialDescriptorSet, *m_gBufferPipeline, 1u);
 	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 1.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 
@@ -933,37 +928,31 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 			_cmdBuf.Bind<core::gpu::Buffer>(*mesh->vertexBuffer);
 			_cmdBuf.Bind<core::gpu::Buffer>(*mesh->indexBuffer);
 
-			GBufferPushConstants pushConstants{};
-			pushConstants.model = transform;
-
+			glm::mat4 prevModel = transform;
 			auto it = m_prevMeshInstances[prevFrame].find(mesh);
 			if (it != m_prevMeshInstances[prevFrame].end())
-			{
-				pushConstants.prevModel = it->second;
-			}
-			else
-			{
-				pushConstants.prevModel = transform;
-			}
+				prevModel = it->second;
 
-			_cmdBuf.PushConstants
-			(
-				*m_gBufferPipeline,
-				static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Vertex),
-				0,
-				sizeof(GBufferPushConstants),
-				&pushConstants
-			);
-
-			for (const auto& submesh : mesh->subMeshes)
+			for (const auto& submesh : mesh->instance.subMeshes)
 			{
-				graphics::render::Material* mat = mesh->GetMaterial(submesh.materialIndex);
-				if (!mat) mat = m_fallbackMaterial.get();
+				MaterialHandle matHandle = submesh.material;
+				if (matHandle == INVALID_MATERIAL)
+					matHandle = m_materialLibrary->GetDefaultMaterial();
 
-				if (mat && mat->descriptorSet)
-				{
-					_cmdBuf.Bind(*mat->descriptorSet, *m_gBufferPipeline, 1u);
-				}
+				GBufferPushConstants pushConstants{};
+				pushConstants.model = transform;
+				pushConstants.prevModel = prevModel;
+				pushConstants.materialId = matHandle;
+
+				_cmdBuf.PushConstants(
+					*m_gBufferPipeline,
+					static_cast<uint32_t>(
+						core::gpu::utils::EShaderStageFlags::Vertex |
+						core::gpu::utils::EShaderStageFlags::Fragment),
+					0,
+					sizeof(GBufferPushConstants),
+					&pushConstants
+				);
 
 				_cmdBuf.DrawIndexed(submesh.indexCount, 1, submesh.firstIndex, submesh.vertexOffset, 0);
 			}
@@ -1213,7 +1202,20 @@ uint32_t Renderer::RegisterBindlessTexture(const core::gpu::Texture& _texture)
 		giDescriptorSets[i]->Update(m_device);
 	}
 
+	materialDescriptorSet->BindArray(1, idx, _texture);
+	materialDescriptorSet->Update(m_device);
+
 	return idx;
+}
+
+void Renderer::SyncMaterialsAndTextures()
+{
+	for (uint32_t t = m_nextBindlessTextureIndex; t < static_cast<uint32_t>(m_textureLibrary->Size()); ++t)
+	{
+		RegisterBindlessTexture(m_textureLibrary->Get(static_cast<TextureHandle>(t)));
+	}
+
+	m_materialLibrary->UploadGPUData();
 }
 
 void Renderer::RegisterMesh(graphics::render::Mesh* _mesh)
@@ -1221,33 +1223,14 @@ void Renderer::RegisterMesh(graphics::render::Mesh* _mesh)
 	if (!_mesh || _mesh->meshTableIndex != UINT32_MAX) return;
 	if (m_nextMeshTableIndex >= MAX_MESHES) { std::cerr << "Mesh table full!\n"; return; }
 
-	if (_mesh->materials.empty())
-	{
-		std::cerr << "Warning: Mesh \"" << _mesh->instance.name << "\" has no material, using fallback.\n";
-		_mesh->materials.push_back(m_fallbackMaterial.get());
-	}
-
-	for (auto* mat : _mesh->materials)
-	{
-		if (!mat || mat->materialTableIndex != UINT32_MAX) continue;
-		if (m_nextMaterialTableIndex >= MAX_MATERIALS) { std::cerr << "Material table full!\n"; continue; }
-
-		mat->albedoBindlessIndex = RegisterBindlessTexture(*mat->albedoTexture);
-		mat->normalBindlessIndex = RegisterBindlessTexture(*mat->normalTexture);
-		mat->roughMetalBindlessIndex = RegisterBindlessTexture(*mat->roughnessMetalTexture);
-		mat->materialTableIndex = m_nextMaterialTableIndex++;
-
-		GPUMaterial gpuMat{
-			.baseColor = mat->gpuData.baseColor,
-			.params = mat->gpuData.params,
-			.albedoTexIndex = mat->albedoBindlessIndex,
-			.normalTexIndex = mat->normalBindlessIndex,
-			.roughMetalTexIndex = mat->roughMetalBindlessIndex
-		};
-		m_materialTableBuffer->CopyFrom(&gpuMat, sizeof(GPUMaterial), mat->materialTableIndex * sizeof(GPUMaterial));
-	}
-
 	_mesh->meshTableIndex = m_nextMeshTableIndex++;
+
+	MaterialHandle firstMat = _mesh->instance.subMeshes.empty()
+		? m_materialLibrary->GetDefaultMaterial()
+		: _mesh->instance.subMeshes[0].material;
+
+	if (firstMat == INVALID_MATERIAL)
+		firstMat = m_materialLibrary->GetDefaultMaterial();
 
 	uintptr_t vertexBase = _mesh->vertexBuffer->GetDeviceAddress();
 
@@ -1257,9 +1240,11 @@ void Renderer::RegisterMesh(graphics::render::Mesh* _mesh)
 		.normals = vertexBase + offsetof(graphics::render::Vertex, normal),
 		.uvs = vertexBase + offsetof(graphics::render::Vertex, uv),
 		.tangents = vertexBase + offsetof(graphics::render::Vertex, tangent),
-		.materialId = _mesh->materials.empty() ? 0 : _mesh->materials[0]->materialTableIndex,
+		.materialId = firstMat,
 		.vertexStride = sizeof(graphics::render::Vertex)
 	};
+
+
 	m_meshTableBuffer->CopyFrom(&entry, sizeof(MeshTableEntry), _mesh->meshTableIndex * sizeof(MeshTableEntry));
 }
 

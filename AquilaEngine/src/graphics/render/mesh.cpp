@@ -14,7 +14,8 @@ using namespace graphics::render;
 
 
 Mesh::Mesh(const core::gpu::Device& _device, MeshInstance _instance)
-	: device(_device), instance(_instance)
+	: device(_device)
+	, instance(std::move(_instance))
 {
 	CreateBuffers();
 	EnsureDefaultSubmesh();
@@ -25,7 +26,7 @@ Mesh::~Mesh() noexcept = default;
 
 void Mesh::CreateBuffers()
 {
-	const auto cmdBuf = device.AcquireCommandBuffer();
+	auto cmdBuf = device.AcquireCommandBuffer();
 
 	if (instance.vertices.empty() || instance.indices.empty())
 	{
@@ -93,6 +94,7 @@ void Mesh::CreateBuffers()
 		cmdBuf->CopyBuffer(*stagingIndexBuffer, *indexBuffer, indicesBufferSize);
 		});
 	cmdBuf->Submit(device, true);
+	device.ReleaseCommandBuffer(cmdBuf);
 }
 
 void Mesh::CreateBLAS()
@@ -134,7 +136,7 @@ void Mesh::CreateBLAS()
 
 void Mesh::EnsureDefaultSubmesh()
 {
-	if (!subMeshes.empty())
+	if (!instance.subMeshes.empty())
 		return;
 
 	SubMesh defaultSubmesh
@@ -143,8 +145,8 @@ void Mesh::EnsureDefaultSubmesh()
 		.firstIndex = 0,
 		.indexCount = static_cast<uint32_t>(instance.indices.size()),
 		.vertexOffset = 0,
-		.materialIndex = 0
+		.material = INVALID_MATERIAL
 	};
 
-	subMeshes.push_back(defaultSubmesh);
+	instance.subMeshes.push_back(defaultSubmesh);
 }
