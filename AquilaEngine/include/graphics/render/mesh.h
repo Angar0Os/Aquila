@@ -81,6 +81,12 @@ namespace graphics::render
 			return nullptr;
 		}
 	};
+
+	struct SceneMeshInstance
+	{
+		std::unique_ptr<Mesh> mesh;
+		glm::mat4             worldTransform;
+	};
 }
 
 namespace std

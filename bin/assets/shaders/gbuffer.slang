@@ -91,6 +91,7 @@ FSOutput fragMain(VSOutput input)
     float roughness = roughMetSample.r * materialData.params.y;
 
     o.albedoMetal = float4(albedo, metalness);
+    //o.albedoMetal = float4(materialData.baseColor.rgb, 1.0);
 
     float2 ndcCur = input.clipPosCur.xy / input.clipPosCur.w;
     float2 ndcPrev = input.clipPosPrev.xy / input.clipPosPrev.w;

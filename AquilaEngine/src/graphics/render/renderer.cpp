@@ -789,12 +789,12 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	CreateFallbackTLAS();
 
 	CreateDescriptorSets();
-
-	m_cameraPosition = glm::vec3(1.0f, 1.0f, 3.0f);
+	
+	m_cameraPosition = glm::vec3(2.0f, 1.0f, 5.0f);
 
 	m_viewMatrix = glm::lookAt(
 		m_cameraPosition,
-		glm::vec3(0.5f, 0.35f, 2.0f),
+		glm::vec3(1.5f, 0.35f, 2.0f),
 		glm::vec3(0.0f, 1.0f, 0.0f)
 	);
 

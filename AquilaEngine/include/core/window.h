@@ -26,6 +26,9 @@ namespace core
 
 		static void FramebufferResizeCallback(GLFWwindow* _window, int _width, int _height);
 		bool		m_framebufferResized = false;
+
+		int m_windowedPosX = 0, m_windowedPosY = 0;
+		int m_windowedWidth = 0, m_windowedHeight = 0;
 	public:
 		explicit Window(const WindowDesc _wndDesc);
 		~Window() noexcept;
@@ -46,6 +49,9 @@ namespace core
 
 		bool				WasFramebufferResized();          
 		std::pair<int, int> GetFramebufferSize() const;
+
+		void SetFullscreen(bool _fullscreen, bool _exclusive = false);
+		void ToggleFullscreen();
 	};
 }
 

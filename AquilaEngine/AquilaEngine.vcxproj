@@ -203,6 +203,10 @@
     <ClCompile Include="src\core\gpu\vulkan\image_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\pipeline_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\texture_impl.cpp" />
+    <ClCompile Include="src\core\input\system\inputAction.cpp" />
+    <ClCompile Include="src\core\input\system\inputMapper.cpp" />
+    <ClCompile Include="src\core\input\system\inputSystem_Win32_impl.cpp" />
+    <ClCompile Include="src\core\input\utils\input_converters.cpp" />
     <ClCompile Include="src\core\window.cpp" />
     <ClCompile Include="src\graphics\render\mesh.cpp" />
     <ClCompile Include="src\graphics\render\renderer.cpp" />
@@ -222,6 +226,10 @@
     <ClInclude Include="include\core\gpu\texture.h" />
     <ClInclude Include="include\core\gpu\utils\converters.h" />
     <ClInclude Include="include\core\gpu\utils\enums.h" />
+    <ClInclude Include="include\core\input\system\inputAction.h" />
+    <ClInclude Include="include\core\input\system\inputMapper.h" />
+    <ClInclude Include="include\core\input\system\inputSystem.h" />
+    <ClInclude Include="include\core\input\utils\keys.h" />
     <ClInclude Include="include\core\window.h" />
     <ClInclude Include="include\graphics\render\material.h" />
     <ClInclude Include="include\graphics\render\mesh.h" />
@@ -239,6 +247,8 @@
     <ClInclude Include="src\core\gpu\vulkan\image_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\pipeline_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\texture_impl.h" />
+    <ClInclude Include="src\core\input\system\inputSystem_Win32_impl.h" />
+    <ClInclude Include="src\core\input\utils\input_converters.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\assets\shaders\fxaa.slang" />

@@ -55,6 +55,24 @@
     <Filter Include="Resource Files\shaders">
       <UniqueIdentifier>{f2087e31-5cc0-4dae-a1b0-8b168727d294}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\core\input">
+      <UniqueIdentifier>{2557fbd0-aebc-4550-befd-3000fc8999b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\core\input\system">
+      <UniqueIdentifier>{5add88f8-9a1a-4a9d-a710-94d1fec82007}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\core\input\utils">
+      <UniqueIdentifier>{f7e5c58c-8752-43c6-b959-5510e351d8de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\core\input">
+      <UniqueIdentifier>{40cadc72-9655-41ed-b446-56f3d5ee97a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\core\input\utils">
+      <UniqueIdentifier>{89d37aa8-4d5b-44e6-a025-eb83a43a8006}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\core\input\system">
+      <UniqueIdentifier>{fb68eca0-6edc-4fcc-88b5-704fad58730b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\window.cpp">
@@ -104,6 +122,18 @@
     </ClCompile>
     <ClCompile Include="src\loaders\meshLoader.cpp">
       <Filter>Source Files\loaders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\input\utils\input_converters.cpp">
+      <Filter>Source Files\core\input\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\input\system\inputSystem_Win32_impl.cpp">
+      <Filter>Source Files\core\input\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\input\system\inputAction.cpp">
+      <Filter>Source Files\core\input\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\input\system\inputMapper.cpp">
+      <Filter>Source Files\core\input\system</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -196,6 +226,24 @@
     </ClInclude>
     <ClInclude Include="include\graphics\render\material.h">
       <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\input\system\inputAction.h">
+      <Filter>Header Files\core\input\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\input\system\inputMapper.h">
+      <Filter>Header Files\core\input\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\input\system\inputSystem.h">
+      <Filter>Header Files\core\input\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\input\utils\keys.h">
+      <Filter>Header Files\core\input\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\input\utils\input_converters.h">
+      <Filter>Source Files\core\input\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\input\system\inputSystem_Win32_impl.h">
+      <Filter>Source Files\core\input\system</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

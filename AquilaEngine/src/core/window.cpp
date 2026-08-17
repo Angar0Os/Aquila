@@ -80,6 +80,49 @@ bool Window::WasFramebufferResized()
 	return wasResized;
 }
 
+void Window::SetFullscreen(bool _fullscreen, bool _exclusive)
+{
+	if (_fullscreen == m_wndInfo.isFullscreen)
+		return;
+
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+	if (_fullscreen)
+	{
+		glfwGetWindowPos(m_window, &m_windowedPosX, &m_windowedPosY);
+		glfwGetWindowSize(m_window, &m_windowedWidth, &m_windowedHeight);
+
+		if (_exclusive)
+		{
+			glfwSetWindowMonitor(m_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		}
+		else
+		{
+			glfwSetWindowAttrib(m_window, GLFW_DECORATED, GLFW_FALSE);
+
+			int monitorX, monitorY;
+			glfwGetMonitorPos(monitor, &monitorX, &monitorY);
+			glfwSetWindowMonitor(m_window, nullptr, monitorX, monitorY, mode->width, mode->height, GLFW_DONT_CARE);
+		}
+	}
+	else
+	{
+		glfwSetWindowAttrib(m_window, GLFW_DECORATED, GLFW_TRUE);
+		glfwSetWindowMonitor(m_window, nullptr, m_windowedPosX, m_windowedPosY, m_windowedWidth, m_windowedHeight, GLFW_DONT_CARE);
+	}
+
+	m_wndInfo.isFullscreen = _fullscreen;
+	m_wndInfo.exclusiveFullscreen = _exclusive;
+
+	m_framebufferResized = true;
+}
+
+void Window::ToggleFullscreen()
+{
+	SetFullscreen(!m_wndInfo.isFullscreen, m_wndInfo.exclusiveFullscreen);
+}
+
 std::pair<int, int> Window::GetFramebufferSize() const
 {
 	int w, h;
