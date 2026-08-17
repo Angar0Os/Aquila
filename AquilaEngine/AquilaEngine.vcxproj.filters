@@ -73,6 +73,12 @@
     <Filter Include="Header Files\core\input\system">
       <UniqueIdentifier>{fb68eca0-6edc-4fcc-88b5-704fad58730b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\audio">
+      <UniqueIdentifier>{5182f4f9-4ea9-4578-8cb1-41c1f1942d5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\audio">
+      <UniqueIdentifier>{7da46044-8cfc-41d7-aee4-4a2a887d4659}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\window.cpp">
@@ -134,6 +140,9 @@
     </ClCompile>
     <ClCompile Include="src\core\input\system\inputMapper.cpp">
       <Filter>Source Files\core\input\system</Filter>
+    </ClCompile>
+    <ClCompile Include="src\audio\audioSystem.cpp">
+      <Filter>Source Files\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -244,6 +253,12 @@
     </ClInclude>
     <ClInclude Include="src\core\input\system\inputSystem_Win32_impl.h">
       <Filter>Source Files\core\input\system</Filter>
+    </ClInclude>
+    <ClInclude Include="include\audio\audioSystem.h">
+      <Filter>Header Files\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="src\audio\audioSystem_impl.h">
+      <Filter>Source Files\audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

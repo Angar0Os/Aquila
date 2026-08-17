@@ -15,6 +15,8 @@
 
 #include <loaders/meshLoader.h>
 
+#include <audio/audioSystem.h>
+
 #include <chrono>
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
@@ -31,6 +33,8 @@ int main(int argc, char** argv)
 
 	auto gpu = std::make_unique<core::gpu::Device>(*window);
 	auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
+
+	auto audioSystem = std::make_unique<audio::AudioSystem>();
 
 	core::input::system::InputSystem input(window->GetHandle());
 	core::input::system::InputMapper mapper;
@@ -66,6 +70,12 @@ int main(int argc, char** argv)
 
 	auto startTime = std::chrono::steady_clock::now();
 
+	audioSystem->Play(audio::MusicInfo {
+		.path = "assets/music/test.mp3",
+		.baseVolume = 1.0f,
+		.tempo = 130.0f
+	});
+
 	while (!window->ShouldClose())
 	{
 		window->PollEvents();
@@ -100,6 +110,8 @@ int main(int argc, char** argv)
 		{
 			continue;
 		}
+
+		std::cout << audioSystem->GetCurrentRow() << std::endl;
 
 		renderer->Render(gpu->AcquireCommandBuffer(), *image);
 		gpu->Present();

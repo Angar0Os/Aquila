@@ -191,6 +191,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\audio\audioSystem.cpp" />
     <ClCompile Include="src\core\gpu\utils\converters.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\accelerationStructure_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\buffer_impl.cpp" />
@@ -213,6 +214,7 @@
     <ClCompile Include="src\loaders\meshLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\audio\audioSystem.h" />
     <ClInclude Include="include\core\gpu\accelerationStructure.h" />
     <ClInclude Include="include\core\gpu\buffer.h" />
     <ClInclude Include="include\core\gpu\commandBuffer.h" />
@@ -236,6 +238,7 @@
     <ClInclude Include="include\graphics\render\renderer.h" />
     <ClInclude Include="include\loaders\meshLoader.h" />
     <ClInclude Include="include\loaders\shaderLoader.h" />
+    <ClInclude Include="src\audio\audioSystem_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\accelerationStructure_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\commandBuffer_impl.h" />

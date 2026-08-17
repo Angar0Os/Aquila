@@ -3,13 +3,19 @@
 #pragma once
 
 #include <audio/audioSystem.h>
-#include <miniaudio/miniaudio.h>
+#include <bass.h>
 
 namespace audio
 {
 	struct AudioSystem::Impl
 	{
+		HSTREAM streamHandle	= NULL;
 
+		int		volume			= 0;
+		float	tempo			= 0.0f;
+		double	rowRate			= 0.0f;
+		
+		bool	isPlaying		= false;
 	};
 }
 
