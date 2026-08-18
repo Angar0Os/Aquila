@@ -1,0 +1,20 @@
+# bpm=130 rowsPerBeat=8
+
+camera.pos	0	0,3,10,0	linear
+camera.pos	0.299919	0,3,10,0	linear
+camera.pos	2.2091	12.1006,1.8786,5.89627,0	linear
+camera.pos	8	0,4,10,0	linear
+camera.target	0	0,1,0,0	linear
+camera.target	0.299919	0,1,0,0	linear
+camera.target	2.2091	0,1,0,0	linear
+mesh.0.pos	0	0,0,0,0	linear
+mesh.1.pos	0	2.5,1,0,0	linear
+mesh.2.pos	0	5,1,0,0	linear
+mesh.3.pos	0	7.5,1,0,0	linear
+sun.dir	0	-0.8,-0.48,-0.24,0	linear
+sun.dir	8	-0.2,-0.95,-0.15,0	linear
+sun.dir	16	0.5,-0.7,-0.3,0	linear
+sun.dir	24	0.8,-0.45,0.1,0	linear
+sun.dir	32	0.2,-0.8,0.5,0	linear
+sun.dir	40	-0.6,-0.65,0.35,0	linear
+sun.dir	48	-0.8,-0.48,-0.24,0	linear

@@ -141,7 +141,16 @@ namespace graphics::render
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
 		void RegisterMesh(graphics::render::Mesh* _mesh);
 
-		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); } // TODO : This is only to debug GI.
+		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); }
+
+		void SetCamera(const glm::vec3& position);
+		void SetCameraTarget(const glm::vec3& target);
+
+		void MoveCamera(const glm::vec3& delta);
+		void RotateCamera(float yaw, float pitch);
+
+		const glm::vec3& GetCameraPosition() const { return m_cameraPosition; }
+		const glm::vec3& GetCameraTarget() const { return m_cameraTarget; }
 
 		void PushLight(const glm::vec3& _position, const glm::vec3& _color, float _intensity, float _radius)
 		{
@@ -191,7 +200,7 @@ namespace graphics::render
 		void CreateDescriptorSetLayout();
 		void CreateMaterialLayout();
 		void LoadEnvironmentMaps();
-
+		void UpdateCamera();
 
 		std::unique_ptr<core::gpu::Pipeline> BuildGBufferPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildShadowPipeline();
@@ -244,6 +253,10 @@ namespace graphics::render
 		glm::mat4														m_viewMatrix;
 		glm::mat4														m_projMatrix;
 		glm::vec3														m_cameraPosition;
+		glm::vec3														m_cameraTarget = glm::vec3(0.0f, 1.0f, 0.0f);
+
+		float															m_cameraYaw = 0.0f;
+		float															m_cameraPitch = 0.0f;
 
 		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
 

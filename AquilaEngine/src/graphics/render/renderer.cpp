@@ -888,12 +888,9 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	SyncMaterialsAndTextures();
 
 	m_cameraPosition = glm::vec3(2.0f, 2.5f, 8.5f);
+	m_cameraTarget = glm::vec3(3.5f, 1.0f, 2.0f);
 
-	m_viewMatrix = glm::lookAt(
-		m_cameraPosition,
-		glm::vec3(3.5f, 1.0f, 2.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
+	UpdateCamera();
 
 	auto [width, height] = m_device.GetSwapchainExtent();
 	m_projMatrix = glm::perspective(glm::radians(60.0f), float(width) / float(height), 0.1f, 100.0f);
@@ -909,6 +906,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 
 	BuildTLAS();
 	RebuildAccelerationStructures();
+	UpdateCamera();
 	UpdateUniformBuffers();
 	UpdateDescriptorSets();
 
@@ -1131,7 +1129,7 @@ void Renderer::DrawGI(core::gpu::CommandBuffer& _cmdBuf)
 	);
 
 	GIPushConstants pc{};
-	pc.sampleCount = 16;
+	pc.sampleCount = 4;
 	pc.maxDistance = 50.0f;
 	pc.sunDirection = -glm::normalize(m_sunDirection);
 	pc.sunColor = glm::vec3(1.0f);
@@ -1406,4 +1404,29 @@ void Renderer::RebuildAccelerationStructures()
 	commandBuffer->Submit(m_device, true);
 
 	m_device.ReleaseCommandBuffer(commandBuffer);
+}
+
+void Renderer::SetCamera(const glm::vec3& position)
+{
+	m_cameraPosition = position;
+}
+
+void Renderer::SetCameraTarget(const glm::vec3& target)
+{
+	m_cameraTarget = target;
+}
+
+void Renderer::MoveCamera(const glm::vec3& delta)
+{
+	m_cameraPosition += delta;
+	m_cameraTarget += delta;
+}
+
+void Renderer::UpdateCamera()
+{
+	m_viewMatrix = glm::lookAt(
+		m_cameraPosition,
+		m_cameraTarget,
+		glm::vec3(0.0f, 1.0f, 0.0f)
+	);
 }

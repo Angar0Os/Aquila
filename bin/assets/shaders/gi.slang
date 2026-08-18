@@ -224,7 +224,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
     float3 rayOrigin = origin;
     float3 rayDir = direction;
 
-    const uint maxBounces = 16;
+    const uint maxBounces = 4;
 
     for (uint bounce = 0; bounce < maxBounces; ++bounce)
     {
