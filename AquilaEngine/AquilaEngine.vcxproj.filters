@@ -295,5 +295,8 @@
     <None Include="..\bin\assets\shaders\fxaa.slang">
       <Filter>Resource Files\shaders</Filter>
     </None>
+    <None Include="..\bin\assets\shaders\atrous.slang">
+      <Filter>Resource Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

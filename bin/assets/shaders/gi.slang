@@ -241,7 +241,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         if (q.CommittedStatus() == COMMITTED_NOTHING)
         {
             float2 envUV = DirectionToEquirectUV(rayDir);
-            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb * 0.1;
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb * 0.2;
             break;
         }
 
@@ -339,7 +339,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float4 prevClip = mul(gGIConstants.prevViewProj, float4(worldPos, 1.0f));
     if (prevClip.w > 0.0f)
     {
-        float2 prevUV = (prevClip.xy / prevClip.w) * 0.5f + 0.5f;
+        float2 prevUV = (prevClip.xy / prevClip.w) * 0.5f + 0.5f; 
 
         bool onScreen = all(prevUV >= 0.0f) && all(prevUV <= 1.0f);
         bool firstFrame = gGIConstants.frameCount == 0;

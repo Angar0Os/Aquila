@@ -71,8 +71,6 @@ int main(int argc, char** argv)
 	);*/
 
 	glm::mat4 transform(1.0f);
-
-	// Plane (index 0) stays at identity; the rest get spread out along X so they don't overlap.
 	std::vector<glm::mat4> meshTransforms(testScene.size(), glm::mat4(1.0f));
 
 	constexpr float kSpacing = 2.5f;

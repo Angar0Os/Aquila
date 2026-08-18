@@ -152,6 +152,26 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildFXAAPipeline()
 	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
 }
 
+std::unique_ptr<core::gpu::Pipeline> Renderer::BuildATrousPipeline()
+{
+	auto shaderCode = loaders::ReadFile("assets/shaders/atrous.spv");
+
+	std::vector<core::gpu::PushConstantRange> pushConstants = {
+		{
+			.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+			.offset = 0, .size = sizeof(ATrousPushConstants)
+		}
+	};
+
+	core::gpu::PipelineCreateInfo pipelineInfo{};
+	pipelineInfo.shaderStages = { { core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" } };
+	pipelineInfo.pipelineType = core::gpu::utils::EPipelineType::Compute;
+	pipelineInfo.descriptorSetLayouts = { atrousDsLayouts[0].get() };
+	pipelineInfo.pushConstantRanges = pushConstants;
+
+	return std::make_unique<core::gpu::Pipeline>(m_device, pipelineInfo);
+}
+
 void Renderer::LoadEnvironmentMaps()
 {
 	m_envMap.image = TextureLibrary::LoadHDRImage(m_device, "assets/textures/skyboxes/citrus_1k.hdr");
@@ -337,8 +357,7 @@ void Renderer::CreateAttachments()
 		.mipLevels = 1,
 		.format = core::gpu::utils::ETextureFormat::RGBA16_Float,
 		.tiling = core::gpu::utils::EImageTiling::Optimal,
-		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::Sampled
-			   | core::gpu::utils::EImageUsage::TransferSrc, // TODO : need to remove this after gi debug.
+		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::Sampled,
 		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
 		.samples = core::gpu::utils::ESampleCount::e1
 	};
@@ -396,6 +415,40 @@ void Renderer::CreateAttachments()
 	aaColorAttachments.resize(1);
 	aaColorAttachments[0].image = std::make_unique<core::gpu::Image>(m_device, aaInfo);
 	aaColorAttachments[0].texture = std::make_unique<core::gpu::Texture>(m_device, *aaColorAttachments[0].image);
+
+	core::gpu::ImageCreateInfo atrousInfo
+	{
+		.width = width,
+		.height = height,
+		.mipLevels = 1,
+		.format = core::gpu::utils::ETextureFormat::RGBA16_Float,
+		.tiling = core::gpu::utils::EImageTiling::Optimal,
+		.usage = core::gpu::utils::EImageUsage::Storage | core::gpu::utils::EImageUsage::Sampled,
+		.memoryProperties = core::gpu::utils::EMemoryProperty::DeviceLocal,
+		.samples = core::gpu::utils::ESampleCount::e1
+	};
+
+	atrousAttachments.resize(2);
+	for (int i = 0; i < 2; ++i)
+	{
+		atrousAttachments[i].image = std::make_unique<core::gpu::Image>(m_device, atrousInfo);
+		atrousAttachments[i].texture = std::make_unique<core::gpu::Texture>(m_device, *atrousAttachments[i].image, core::gpu::utils::ETextureFilter::Nearest);
+	}
+
+	auto atrousInitCmd = m_device.AcquireCommandBuffer();
+	atrousInitCmd->Record([&]() {
+		for (int i = 0; i < 2; ++i)
+		{
+			atrousInitCmd->TransitionImageLayout(
+				*atrousAttachments[i].image,
+				core::gpu::utils::EImageLayout::Undefined,
+				core::gpu::utils::EImageLayout::ShaderReadOnly,
+				false
+			);
+		}
+		});
+	atrousInitCmd->Submit(m_device, true);
+	m_device.ReleaseCommandBuffer(atrousInitCmd);
 }
 
 void Renderer::CreateDescriptorSetLayout()
@@ -598,6 +651,31 @@ void Renderer::CreateDescriptorSetLayout()
 		m_device,
 		core::gpu::DescriptorSetLayoutCreateInfo{ .bindings = { fxaaInputBinding, fxaaOutputBinding } }
 	));
+
+	core::gpu::DescriptorSetLayoutBinding atrousInputBinding{
+		.binding = 0, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding atrousDepthBinding{
+		.binding = 1, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding atrousNormalBinding{
+		.binding = 2, .descriptorType = core::gpu::utils::EDescriptorType::CombinedImageSampler,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+	core::gpu::DescriptorSetLayoutBinding atrousOutputBinding{
+		.binding = 3, .descriptorType = core::gpu::utils::EDescriptorType::StorageImage,
+		.stageFlags = core::gpu::utils::EShaderStage::Compute
+	};
+
+	atrousDsLayouts.clear();
+	atrousDsLayouts.push_back(std::make_unique<core::gpu::DescriptorSetLayout>(
+		m_device,
+		core::gpu::DescriptorSetLayoutCreateInfo{
+			.bindings = { atrousInputBinding, atrousDepthBinding, atrousNormalBinding, atrousOutputBinding }
+		}
+	));
 }
 
 void Renderer::CreateMaterialLayout()
@@ -709,7 +787,7 @@ void Renderer::CreateDescriptorSets()
 		ds->Bind(2, *gBufferColorAttachments[1].texture);
 		ds->Bind(3, *shadowMaskAttachment.texture);
 		ds->Bind(4, *resolveColorAttachments[0].image);
-		ds->Bind(5, *giColorAttachments[0].texture);
+		ds->Bind(5, *atrousAttachments[0].texture);
 		ds->Bind(6, *gBufferDepthAttachment.texture);
 		ds->Bind(7, *m_envMap.texture);
 		ds->Bind(8, *lightBuffers[i]);
@@ -733,6 +811,31 @@ void Renderer::CreateDescriptorSets()
 	materialDescriptorSet = std::make_unique<core::gpu::DescriptorSet>(m_device, *materialLayout);
 	materialDescriptorSet->Bind(0, m_materialLibrary->GetGPUBuffer());
 	materialDescriptorSet->Update(m_device);
+
+	atrousDescriptorSets.clear();
+	atrousDescriptorSets.resize(m_device.FRAMES_IN_FLIGHT);
+
+	for (uint32_t frame = 0; frame < m_device.FRAMES_IN_FLIGHT; ++frame)
+	{
+		for (int pass = 0; pass < 5; ++pass)
+		{
+			auto ds = std::make_unique<core::gpu::DescriptorSet>(m_device, *atrousDsLayouts[0]);
+
+			core::gpu::Texture* inputTex = (pass == 0)
+				? giColorAttachments[0].texture.get()    
+				: atrousAttachments[(pass - 1) % 2].texture.get();
+
+			core::gpu::Image* outputImg = atrousAttachments[pass % 2].image.get();
+
+			ds->Bind(0, *inputTex);
+			ds->Bind(1, *gBufferDepthAttachment.texture);
+			ds->Bind(2, *gBufferColorAttachments[1].texture);
+			ds->Bind(3, *outputImg);
+			ds->Update(m_device);
+
+			atrousDescriptorSets[frame][pass] = std::move(ds);
+		}
+	}
 }
 
 void Renderer::UpdateDescriptorSets()
@@ -752,10 +855,10 @@ void Renderer::UpdateDescriptorSets()
 	giDescriptorSets[m_device.currentFrame]->Bind(7, *giColorAttachments[readIdx].texture);
 	giDescriptorSets[m_device.currentFrame]->Update(m_device);
 
-	resolveDescriptorSets[m_device.currentFrame]->Bind(5, *giColorAttachments[writeIdx].texture);
-	resolveDescriptorSets[m_device.currentFrame]->Update(m_device);
-
 	shadowDescriptorSets[m_device.currentFrame]->Update(m_device);
+
+	atrousDescriptorSets[m_device.currentFrame][0]->Bind(0, *giColorAttachments[m_giParity].texture);
+	atrousDescriptorSets[m_device.currentFrame][0]->Update(m_device);
 }
 
 Renderer::Renderer(const core::gpu::Device& _device)
@@ -777,6 +880,7 @@ Renderer::Renderer(const core::gpu::Device& _device)
 	m_giPipeline = BuildGIPipeline();
 	m_resolvePipeline = BuildResolvePipeline();
 	m_fxaaPipeline = BuildFXAAPipeline();
+	m_atrousPipeline = BuildATrousPipeline();
 
 	CreateFallbackTLAS();
 	CreateDescriptorSets();
@@ -815,6 +919,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 			DrawGBuffer(*_cmdBuf);
 			DrawShadow(*_cmdBuf);
 			DrawGI(*_cmdBuf);
+			DrawATrous(*_cmdBuf);
 			DrawResolve(*_cmdBuf);
 			DrawFXAA(*_cmdBuf);
 
@@ -1112,6 +1217,46 @@ void Renderer::DrawFXAA(core::gpu::CommandBuffer& _cmdBuf)
 		core::gpu::utils::EImageLayout::TransferSrc,
 		false
 	);
+}
+
+void Renderer::DrawATrous(core::gpu::CommandBuffer& _cmdBuf)
+{
+	auto [width, height] = m_device.GetSwapchainExtent();
+
+	constexpr int steps[5] = { 1, 2, 4, 8, 16 };
+
+	for (int pass = 0; pass < 5; ++pass)
+	{
+		core::gpu::Image* outputImage = atrousAttachments[pass % 2].image.get();
+
+		_cmdBuf.TransitionImageLayout(
+			*outputImage,
+			core::gpu::utils::EImageLayout::Undefined,
+			core::gpu::utils::EImageLayout::General,
+			false
+		);
+
+		_cmdBuf.Bind<core::gpu::Pipeline>(*m_atrousPipeline);
+		_cmdBuf.Bind(*atrousDescriptorSets[m_device.currentFrame][pass], *m_atrousPipeline, 0u);
+
+		ATrousPushConstants pc{};
+		pc.stepSize = steps[pass];
+
+		_cmdBuf.PushConstants(
+			*m_atrousPipeline,
+			static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
+			0, sizeof(ATrousPushConstants), &pc
+		);
+
+		_cmdBuf.Dispatch((width + 15) / 16, (height + 15) / 16, 1);
+
+		_cmdBuf.TransitionImageLayout(
+			*outputImage,
+			core::gpu::utils::EImageLayout::General,
+			core::gpu::utils::EImageLayout::ShaderReadOnly,
+			false
+		);
+	}
 }
 
 void Renderer::UpdateUniformBuffers()

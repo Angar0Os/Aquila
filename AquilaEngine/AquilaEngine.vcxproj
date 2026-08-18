@@ -259,6 +259,7 @@
     <ClInclude Include="src\core\input\utils\input_converters.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\bin\assets\shaders\atrous.slang" />
     <None Include="..\bin\assets\shaders\fxaa.slang" />
     <None Include="..\bin\assets\shaders\gbuffer.slang" />
     <None Include="..\bin\assets\shaders\gi.slang" />

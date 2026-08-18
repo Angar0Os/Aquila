@@ -14,6 +14,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include <array>
 
 namespace core::gpu { class AccelerationStructure; class Buffer; class CommandBuffer; class DescriptorSet;  class DescriptorSetLayout; class Image; class Pipeline; class Texture; }
 
@@ -74,6 +75,14 @@ namespace graphics::render
 	{
 		glm::vec2 texelSize;
 		float     _pad[2] = { 0.0f, 0.0f };
+	};
+
+	struct ATrousPushConstants
+	{
+		int   stepSize;
+		float sigmaDepth = 0.01f;
+		float sigmaNormal = 32.0f;
+		float _pad = 0.0f;
 	};
 
 	struct MeshTableEntry
@@ -147,14 +156,16 @@ namespace graphics::render
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	resolveDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	giDsLayouts;
 		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	fxaaDsLayouts;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSetLayout>>	atrousDsLayouts;
 
 		std::unique_ptr<core::gpu::DescriptorSetLayout>					materialLayout;
 
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			gBufferDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			resolveDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			shadowDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			giDescriptorSets;
-		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>			fxaaDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>					gBufferDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>					resolveDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>					shadowDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>					giDescriptorSets;
+		std::vector<std::unique_ptr<core::gpu::DescriptorSet>>					fxaaDescriptorSets;
+		std::vector<std::array<std::unique_ptr<core::gpu::DescriptorSet>, 5>>	atrousDescriptorSets;
 
 		std::vector<std::unique_ptr<core::gpu::Buffer>>					uniformBuffers;
 
@@ -163,6 +174,7 @@ namespace graphics::render
 		std::vector<PassAttachment>										giColorAttachments;
 		std::vector<PassAttachment>										resolveColorAttachments;
 		std::vector<PassAttachment>										aaColorAttachments;
+		std::vector<PassAttachment>										atrousAttachments;
 
 
 
@@ -186,12 +198,14 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline> BuildGIPipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildResolvePipeline();
 		std::unique_ptr<core::gpu::Pipeline> BuildFXAAPipeline();
+		std::unique_ptr<core::gpu::Pipeline> BuildATrousPipeline();
 
 		void DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawShadow(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawGI(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawResolve(core::gpu::CommandBuffer& _cmdBuf);
 		void DrawFXAA(core::gpu::CommandBuffer& _cmdBuf);
+		void DrawATrous(core::gpu::CommandBuffer& _cmdBuf);
 
 		void UpdateUniformBuffers();
 		void BuildTLAS();
@@ -212,6 +226,7 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline>		m_giPipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_resolvePipeline;
 		std::unique_ptr<core::gpu::Pipeline>		m_fxaaPipeline;
+		std::unique_ptr<core::gpu::Pipeline>		m_atrousPipeline;
 
 		PassAttachment								m_envMap;
 		PassAttachment								m_irradianceMap;
