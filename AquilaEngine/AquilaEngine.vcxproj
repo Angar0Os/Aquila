@@ -191,6 +191,19 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\external\include\imGuizmo\GraphEditor.cpp" />
+    <ClCompile Include="..\external\include\imGuizmo\ImCurveEdit.cpp" />
+    <ClCompile Include="..\external\include\imGuizmo\ImGradient.cpp" />
+    <ClCompile Include="..\external\include\imGuizmo\ImGuizmo.cpp" />
+    <ClCompile Include="..\external\include\imGuizmo\ImSequencer.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\external\include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\external\include\imPlot3D\implot3d.cpp" />
     <ClCompile Include="src\audio\audioSystem.cpp" />
     <ClCompile Include="src\core\gpu\utils\converters.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\accelerationStructure_impl.cpp" />
@@ -216,6 +229,22 @@
     <ClCompile Include="src\loaders\meshLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\external\include\imGuizmo\GraphEditor.h" />
+    <ClInclude Include="..\external\include\imGuizmo\ImCurveEdit.h" />
+    <ClInclude Include="..\external\include\imGuizmo\ImGradient.h" />
+    <ClInclude Include="..\external\include\imGuizmo\ImGuizmo.h" />
+    <ClInclude Include="..\external\include\imGuizmo\ImSequencer.h" />
+    <ClInclude Include="..\external\include\imGuizmo\ImZoomSlider.h" />
+    <ClInclude Include="..\external\include\imgui\imconfig.h" />
+    <ClInclude Include="..\external\include\imgui\imgui.h" />
+    <ClInclude Include="..\external\include\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="..\external\include\imgui\imgui_impl_vulkan.h" />
+    <ClInclude Include="..\external\include\imgui\imgui_internal.h" />
+    <ClInclude Include="..\external\include\imgui\imstb_rectpack.h" />
+    <ClInclude Include="..\external\include\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\external\include\imgui\imstb_truetype.h" />
+    <ClInclude Include="..\external\include\imPlot3D\implot3d.h" />
+    <ClInclude Include="..\external\include\imPlot3D\implot3d_internal.h" />
     <ClInclude Include="include\audio\audioSystem.h" />
     <ClInclude Include="include\core\gpu\accelerationStructure.h" />
     <ClInclude Include="include\core\gpu\buffer.h" />
