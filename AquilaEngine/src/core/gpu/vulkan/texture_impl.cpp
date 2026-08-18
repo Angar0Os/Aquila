@@ -17,9 +17,9 @@ Texture::Texture(const Device& _device, const Image& _image, utils::ETextureFilt
     samplerInfo.mipmapMode = (_filter == utils::ETextureFilter::Nearest)
         ? vk::SamplerMipmapMode::eNearest
         : vk::SamplerMipmapMode::eLinear;
-    samplerInfo.addressModeU = vk::SamplerAddressMode::eClampToEdge; 
-    samplerInfo.addressModeV = vk::SamplerAddressMode::eClampToEdge;
-    samplerInfo.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+    samplerInfo.addressModeU = vk::SamplerAddressMode::eRepeat; 
+    samplerInfo.addressModeV = vk::SamplerAddressMode::eRepeat;
+    samplerInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
     samplerInfo.mipLodBias = 0.0f;
     samplerInfo.anisotropyEnable = (_filter == utils::ETextureFilter::Nearest) ? vk::False : vk::True;
     samplerInfo.maxAnisotropy = (_filter == utils::ETextureFilter::Nearest) ? 1.0f : properties.limits.maxSamplerAnisotropy;

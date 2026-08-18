@@ -77,6 +77,11 @@ int main(int argc, char** argv)
 
     mapper.Action("NewTimeline") = core::input::utils::E_KEYS::KEY_N;
 
+    mapper.Action("CameraLookLeft") = core::input::utils::E_KEYS::KEY_J;
+    mapper.Action("CameraLookRight") = core::input::utils::E_KEYS::KEY_L;
+    mapper.Action("CameraLookUp") = core::input::utils::E_KEYS::KEY_I;
+    mapper.Action("CameraLookDown") = core::input::utils::E_KEYS::KEY_O;
+
     demo::SyncTimeline timeline;
     const std::string timelinePath = "assets/demo.timeline";
 
@@ -89,8 +94,8 @@ int main(int argc, char** argv)
 
     std::vector<glm::mat4> meshTransforms(testScene.size(), glm::mat4(1.0f));
 
-    glm::vec3 cameraPos = glm::vec3(0.0f, 3.0f, 10.0f);
-    glm::vec3 cameraTarget = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 10.0f);
+    glm::vec3 cameraTarget = glm::vec3(5.3603, -1.4502, -2.02124);
     glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -0.6f, -0.3f));
 
     mapper.Action("NewTimeline") = std::function<void()>([&]() {
@@ -124,7 +129,8 @@ int main(int argc, char** argv)
         std::cout << "Created timeline: " << timelinePath << "\n";
     });
 
-    mapper.Action("DumpCamera") = core::input::utils::E_KEYS::KEY_K;
+
+    mapper.Action("DumpCamera") = core::input::utils::E_KEYS::KEY_Q;
 
     mapper.Action("DumpCamera") = std::function<void()>([&]() {
         const float row = static_cast<float>(audioSystem->GetCurrentRow());
@@ -153,13 +159,14 @@ int main(int argc, char** argv)
 
     audioSystem->Play(
         audio::MusicInfo{
-            .path = "assets/music/test.mp3",
+            .path = "assets/music/evoke_quentin.mp3",
             .baseVolume = 1.0f,
-            .tempo = 130.0f
+            .tempo = 95.0f
         }
     );
 
-    constexpr float kCameraSpeed = 5.0f;
+    constexpr float CameraSpeed = 5.0f;
+    constexpr float CameraLookSpeed = 3.0f;
 
     while (!window->ShouldClose())
     {
@@ -219,15 +226,43 @@ int main(int argc, char** argv)
             cameraMove.y += 1.0f;
         }
 
-        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_LEFT_ALT))
+        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_RIGHT_ALT))
         {
             cameraMove.y -= 1.0f;
         }
 
         if (glm::length(cameraMove) > 0.0f)
         {
-            cameraMove = glm::normalize(cameraMove) * kCameraSpeed * deltaTime;
+            cameraMove = glm::normalize(cameraMove) * CameraSpeed * deltaTime;
             cameraPos += cameraMove;
+        }
+
+        glm::vec3 cameraLookMove(0.0f);
+
+        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_J))
+        {
+            cameraLookMove -= cameraRight;
+        }
+
+        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_L))
+        {
+            cameraLookMove += cameraRight;
+        }
+
+        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_I))
+        {
+            cameraLookMove += glm::vec3(0.0f, 1.0f, 0.0f);
+        }
+
+        if (input.IsKeyHeld(core::input::utils::E_KEYS::KEY_K))
+        {
+            cameraLookMove -= glm::vec3(0.0f, 1.0f, 0.0f);
+        }
+
+        if (glm::length(cameraLookMove) > 0.0f)
+        {
+            cameraLookMove = glm::normalize(cameraLookMove) * CameraLookSpeed * deltaTime;
+            cameraTarget += cameraLookMove;
         }
 
         renderer->SetCamera(cameraPos);

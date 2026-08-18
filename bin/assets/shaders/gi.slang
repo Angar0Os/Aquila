@@ -241,7 +241,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         if (q.CommittedStatus() == COMMITTED_NOTHING)
         {
             float2 envUV = DirectionToEquirectUV(rayDir);
-            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb * 0.2;
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb;
             break;
         }
 
