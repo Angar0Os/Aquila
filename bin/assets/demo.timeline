@@ -2,11 +2,13 @@
 
 camera.pos	0	0,3,10,0	linear
 camera.pos	0.299919	0,3,10,0	linear
+camera.pos	2.01578	-3.43471,4.42142,9.13526,0	linear
 camera.pos	2.2091	12.1006,1.8786,5.89627,0	linear
 camera.pos	7.66741	2.08055,3.51414,4.5205,0	linear
 camera.pos	8	0,4,10,0	linear
 camera.target	0	0,1,0,0	linear
 camera.target	0.299919	0,1,0,0	linear
+camera.target	2.01578	5.3603,-1.4502,-2.02124,0	linear
 camera.target	2.2091	0,1,0,0	linear
 camera.target	7.66741	5.3603,-1.4502,-2.02124,0	linear
 mesh.0.pos	0	0,0,0,0	linear

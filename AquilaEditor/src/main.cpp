@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         core::WindowDesc{
             .appName = "Aquila - Restir Showdown",
             .windowSize = { 1080, 720 },
-            .isFullscreen = false,
+            .isFullscreen = true,
             .isResizable = true,
             .exclusiveFullscreen = false
         }
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
 
         for (size_t i = 0; i < testScene.size(); ++i)
         {
-            meshTrackNames.push_back("mesh." + std::to_string(i));
+            meshTrackNames.push_back("mesh." + std::to_string(i)); 
             meshPositions.push_back(glm::vec3(meshTransforms[i][3]));
         }
 
