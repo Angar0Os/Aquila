@@ -7,7 +7,7 @@
 
 #include <graphics/render/materialLibrary.h>
 #include <graphics/render/textureLibrary.h>
-
+#include <graphics/render/light.h>
 
 #include <glm/glm.hpp>
 
@@ -34,21 +34,14 @@ namespace graphics::render
 		uint32_t  frameCount;
 	};
 
-	struct LightData
-	{
-		core::gpu::utils::ELightType	type;
-		glm::vec3						color;
-		float							intensity;
-		glm::vec2						spotAngles = { glm::radians(15.0f), glm::radians(30.0f) };
-		float							radius = 0.0f;
-	};
-
 	struct GPULight // TODO : We will remove this and put this into UBO after Evoke.
 	{
-		glm::vec3 position;
-		float     radius;
-		glm::vec3 color;
-		float     intensity;
+		glm::vec3						position;
+		core::gpu::utils::ELightType	type;
+		glm::vec3						direction = glm::vec3(0.0f);
+		float							radius;
+		glm::vec3						color;
+		float							intensity;
 	};
 
 	struct GBufferPushConstants
@@ -61,14 +54,14 @@ namespace graphics::render
 
 	struct ShadowPushConstants
 	{
-		glm::vec3 lightDirection = glm::normalize(glm::vec3(-0.3f, -1.0f, -0.2f));
-		float     maxDistance = 1000.0f;
+		uintptr_t	lightBuffer;
+		float		maxDistance;
 	};
 
 	struct ResolvePushConstants
 	{
-		uint32_t numLights = 0;
-		float    _pad[3] = { 0.0f, 0.0f, 0.0f };
+		uintptr_t	lightBuffer;
+		uint32_t	numLights;
 	};
 
 	struct FXAAPushConstants
@@ -98,13 +91,11 @@ namespace graphics::render
 
 	struct GIPushConstants
 	{
-		uint32_t  sampleCount = 8;
-		float     maxDistance = 50.0f;
-		float     _pad0[2] = { 0.0f, 0.0f };
-		glm::vec3 sunDirection = glm::vec3(0.0f, 1.0f, 0.0f);
-		float     _pad1 = 0.0f;
-		glm::vec3 sunColor = glm::vec3(1.0f);
-		float     _pad2 = 0.0f;
+		uint32_t	sampleCount = 8;
+		float		maxDistance = 50.0f;
+		uint32_t	numLights;
+		uint32_t	_pad0;
+		uintptr_t	lightBuffer;
 	};
 
 	struct PassAttachment
@@ -141,8 +132,6 @@ namespace graphics::render
 		void PushMesh(graphics::render::Mesh* _mesh, glm::mat4& _transform);
 		void RegisterMesh(graphics::render::Mesh* _mesh);
 
-		void SetSunDirection(const glm::vec3& _direction) { m_sunDirection = glm::normalize(_direction); }
-
 		void SetCamera(const glm::vec3& position);
 		void SetCameraTarget(const glm::vec3& target);
 
@@ -152,9 +141,9 @@ namespace graphics::render
 		const glm::vec3& GetCameraPosition() const { return m_cameraPosition; }
 		const glm::vec3& GetCameraTarget() const { return m_cameraTarget; }
 
-		void PushLight(const glm::vec3& _position, const glm::vec3& _color, float _intensity, float _radius)
+		void PushLight(const GPULight& _light)
 		{
-			m_pointLights.push_back({ _position, _radius, _color, _intensity });
+			m_gpuLights.push_back({ _light.position, _light.type , _light.direction, _light.radius, _light.color, _light.intensity });
 		}
 
 		TextureLibrary& GetTextureLibrary() { return *m_textureLibrary; }
@@ -238,7 +227,6 @@ namespace graphics::render
 		std::unique_ptr<core::gpu::Pipeline>		m_atrousPipeline;
 
 		PassAttachment								m_envMap;
-		PassAttachment								m_irradianceMap;
 
 		std::vector<std::pair<Mesh*, glm::mat4>>	m_meshInstances;
 		std::unordered_map<Mesh*, glm::mat4>		m_prevMeshInstances[core::gpu::Device::FRAMES_IN_FLIGHT];
@@ -258,13 +246,11 @@ namespace graphics::render
 		float															m_cameraYaw = 0.0f;
 		float															m_cameraPitch = 0.0f;
 
-		glm::vec3														m_sunDirection = glm::normalize(glm::vec3(-1.0f, -0.2f, -0.3f));
-
 		uint32_t														m_giParity = 0;
 
-		std::vector<std::unique_ptr<core::gpu::Buffer>> lightBuffers;
+		std::unique_ptr<core::gpu::Buffer>				lightBuffer;
 		static constexpr uint32_t						MAX_LIGHTS = 32;
-		std::vector<GPULight>							m_pointLights;
+		std::vector<GPULight>							m_gpuLights;
 
 		size_t											m_maxMeshesInTableBuffer = 0;
 		std::unique_ptr<core::gpu::Buffer>				m_meshTableBuffer = nullptr;

@@ -19,7 +19,7 @@ Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 	vk::BufferCreateInfo bufferInfo{};
 	bufferInfo.flags = {};
 	bufferInfo.size = static_cast<vk::DeviceSize>(_info.size);
-	bufferInfo.usage = utils::ToVulkan(_info.usage);
+	bufferInfo.usage = utils::ToVulkan(_info.usage) | vk::BufferUsageFlagBits::eShaderDeviceAddress;
 	bufferInfo.sharingMode = vk::SharingMode::eExclusive;
 
 	buffer = vk::raii::Buffer(_device.GetImpl().device, bufferInfo);
@@ -27,9 +27,9 @@ Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 	vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
 
 	vk::MemoryAllocateFlagsInfo allocFlagsInfo{};
-	bool needsDeviceAddress = (_info.usage & utils::EBufferUsage::ShaderDeviceAddress) != utils::EBufferUsage::None;
+	//bool needsDeviceAddress = (_info.usage & utils::EBufferUsage::ShaderDeviceAddress) != utils::EBufferUsage::None;
 
-	if (needsDeviceAddress)
+	//if (needsDeviceAddress)
 	{
 		allocFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
 	}
@@ -41,7 +41,7 @@ Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 		utils::ToVulkan(_info.memoryProperties)
 	);
 
-	if (needsDeviceAddress)
+	//if (needsDeviceAddress)
 	{
 		allocInfo.pNext = &allocFlagsInfo;
 	}

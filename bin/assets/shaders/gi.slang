@@ -65,17 +65,33 @@ StructuredBuffer<GPUMaterial> gMaterialTable;
 [[vk::binding(12, 0)]]
 Sampler2D gBindlessTextures[4096];
 
-[[vk::push_constant]]
-cbuffer GIPushConstants
+enum ELightType
+{
+    Sun,
+    Point,
+    Spot
+};
+
+struct Light
+{
+    float3 position;
+    ELightType type;
+    float3 direction;
+    float radius;
+    float3 color;
+    float intensity;
+};
+
+struct GIPushConstants
 {
     uint sampleCount;
     float maxDistance;
-    float2 _pad0;
-    float3 sunDirection;
-    float _pad1;
-    float3 sunColor;
-    float _pad2;
+    uint numLights;
+    Light* lightBuffer;
 };
+
+[[vk::push_constant]]
+ConstantBuffer<GIPushConstants> pc;
 
 static const float PI = 3.14159265f;
 static const float SURFACE_BIAS = 0.2f;
@@ -232,7 +248,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         ray.Origin = rayOrigin;
         ray.Direction = rayDir;
         ray.TMin = 0.0f;
-        ray.TMax = maxDistance;
+        ray.TMax = pc.maxDistance;
 
         RayQuery<RAY_FLAG_NONE> q;
         q.TraceRayInline(gTLAS, RAY_FLAG_NONE, 0xFF, ray);
@@ -264,11 +280,29 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
 
         float3 approxAlbedo = SampleMaterialAlbedo(surface.material, surface.uv);
 
-        bool occluded = TraceOcclusion(hitPos + geoNormal * SURFACE_BIAS, -sunDirection, maxDistance);
-        if (!occluded)
+        for (int i = 0; i < pc.numLights; ++i)
         {
-            float NdotL = max(dot(hitNormal, -sunDirection), 0.0f);
-            radiance += throughput * (approxAlbedo / PI) * sunColor * NdotL;
+            Light light = pc.lightBuffer[i];
+            bool occluded = TraceOcclusion(hitPos + geoNormal * SURFACE_BIAS, -pc.lightBuffer[i].direction, pc.maxDistance);
+            if (!occluded)
+            {
+                float3 toLight = light.position - hitPos;
+                if (light.type == ELightType.Sun)
+                    toLight = -light.direction;
+
+                float dist = light.type == ELightType.Sun ? 1.0f : length(toLight);
+                float3 L = toLight / max(dist, 0.0001f);
+
+                float attenuation = 1.0f / max(dist * dist, 0.0001f);
+                if (light.radius > 0.0f)
+                    attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
+
+                float NdotL = max(dot(hitNormal, L), 0.0f);
+
+                float3 current = approxAlbedo * light.color * light.intensity * NdotL * attenuation;
+
+                radiance += throughput * current;
+            }
         }
 
         float pdf;
@@ -318,7 +352,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
 
     float3 GI = float3(0.0f, 0.0f, 0.0f);
 
-    for (uint i = 0; i < sampleCount; ++i)
+    for (uint i = 0; i < pc.sampleCount; ++i)
     {
         float pdf;
         float3 wi = SampleHemisphere(N, seed, pdf);
@@ -332,7 +366,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
         GI += (brdf * Li * cosTerm) / pdf;
     }
 
-    GI /= float(sampleCount);
+    GI /= float(pc.sampleCount);
 
     float3 finalGI = GI;
 

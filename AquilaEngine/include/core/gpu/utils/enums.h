@@ -8,7 +8,7 @@ namespace core::gpu::utils
 {
 	enum class ELightType : uint32_t
 	{
-		Directional,
+		Sun,
 		Point,
 		Spot
 	};

@@ -18,6 +18,7 @@
 
 #include <graphics/render/renderer.h>
 #include <graphics/render/mesh.h>
+#include <graphics/render/light.h>
 
 #include <loaders/meshLoader.h>
 
@@ -153,20 +154,40 @@ int main(int argc, char** argv)
         std::cout << "No timeline found.\n" << "Press Ctrl+N to create: " << timelinePath << "\n";
     }
 
-    renderer->PushLight(glm::vec3(1.0f, 3.0f, 4.0f), glm::vec3(1.0f), 10.0f, 20.0f);
+   
 
     auto previousTime = std::chrono::steady_clock::now();
 
-    audioSystem->Play(
+ /*   audioSystem->Play(
         audio::MusicInfo{
             .path = "assets/music/evoke_quentin.mp3",
             .baseVolume = 0.1f,
             .tempo = 95.0f
         }
-    );
+    );*/
 
     constexpr float CameraSpeed = 5.0f;
     constexpr float CameraLookSpeed = 3.0f;
+
+    glm::vec3 m_sunDirection = glm::normalize(glm::vec3(-0.1f, -0.9f, -0.3f));
+    graphics::render::GPULight sun
+    {
+        .position = glm::vec3(0.0f),
+        .type = core::gpu::utils::ELightType::Sun,
+        .direction = m_sunDirection,
+        .color = glm::vec3(1.0f),
+        .intensity = 1.0f
+    };
+
+    graphics::render::GPULight light
+    {
+        .position = glm::vec3(3.0f, 5.5f, 3.0f),
+        .type = core::gpu::utils::ELightType::Point,
+        .direction = glm::vec3(0.0f),
+        .radius = 0.0f,
+        .color = glm::vec3(1.0f, 0.2f, 1.0f),
+        .intensity = 100.0f
+    };
 
     while (!window->ShouldClose())
     {
@@ -276,14 +297,8 @@ int main(int argc, char** argv)
             meshTransforms[i] = glm::translate(glm::mat4(1.0f), glm::vec3(position));
         }
 
-        const glm::vec4 timelineSun = timeline.Evaluate("sun.dir", row);
-
-        //if (glm::length(glm::vec3(timelineSun)) > 0.0001f)
-        //{
-        //    sunDir = glm::normalize(glm::vec3(timelineSun));
-        //}
-
-        renderer->SetSunDirection(sunDir);
+        renderer->PushLight(sun);
+        renderer->PushLight(light);
 
         for (size_t i = 0; i < testScene.size(); ++i)
         {

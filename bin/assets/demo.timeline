@@ -16,7 +16,7 @@ camera.target	7.66741	5.3603,-1.4502,-2.02124,0	linear
 mesh.0.pos	0	0,1,0,1		linear
 mesh.1.pos	0	2.5,0,0,1	linear
 mesh.2.pos	0	5,1,0,1		linear
-mesh.3.pos	0	7.5,1,0,1	linear
+mesh.3.pos	0	7.5,0.55,0,1	linear
 sun.dir	0	-0.8,-0.48,-0.24,0	linear
 sun.dir	8	-0.2,-0.95,-0.15,0	linear
 sun.dir	16	0.5,-0.7,-0.3,0	linear

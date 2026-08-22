@@ -389,6 +389,9 @@
     <ClInclude Include="include\core\imgui\context.h">
       <Filter>Header Files\core\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="include\graphics\render\light.h">
+      <Filter>Header Files\graphics\render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\bin\assets\shaders\gbuffer.slang">

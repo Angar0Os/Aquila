@@ -149,6 +149,7 @@
       <LanguageStandard>stdcpp23</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -175,6 +176,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -266,6 +268,7 @@
     <ClInclude Include="include\core\input\system\inputSystem.h" />
     <ClInclude Include="include\core\input\utils\keys.h" />
     <ClInclude Include="include\core\window.h" />
+    <ClInclude Include="include\graphics\render\light.h" />
     <ClInclude Include="include\graphics\render\material.h" />
     <ClInclude Include="include\graphics\render\materialGPUData.h" />
     <ClInclude Include="include\graphics\render\materialLibrary.h" />

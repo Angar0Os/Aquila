@@ -10,9 +10,18 @@ cbuffer UniformBufferObject
     uint frameCount;
 };
 
-struct GPULight
+enum ELightType
+{
+    Sun, 
+    Point,
+    Spot
+};
+
+struct Light
 {
     float3 position;
+    ELightType type;
+    float3 direction;
     float radius;
     float3 color;
     float intensity;
@@ -39,20 +48,13 @@ Sampler2D depthTex;
 [[vk::binding(7, 0)]]
 Sampler2D envMapRaw;
 
-[[vk::binding(8, 0)]]
-StructuredBuffer<GPULight> lights;
-
 [[vk::push_constant]]
 cbuffer ResolvePushConstants
 {
+    Light *lightBuffer;
     uint numLights;
-    uint _pad0;
-    uint _pad1;
-    uint _pad2;
 };
 
-static const float3 sunDir = normalize(float3(-1.0, -0.2, -0.3));
-static const float3 sunColor = float3(1.0, 1.0, 1.0);
 static const float  exposure = 1.0f;
 
 float2 DirectionToEquirectUV(float3 dir)
@@ -107,27 +109,32 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
     float3 N = normalize(normalTex.SampleLevel(uv, 0).xyz * 2.0 - 1.0);
     float shadow = shadowMaskTex.SampleLevel(uv, 0).r;
 
-    float NdotL = max(dot(N, -sunDir), 0.0);
-    float3 direct = NdotL * shadow * sunColor * albedo;
     float3 worldPos = ReconstructPosition(uv, depth);
+    float3 direct = 0.0f.xxx;
 
-    //for (uint i = 0; i < numLights; ++i)
-    //{
-    //    GPULight light = lights[i];
-    //
-    //    float3 toLight = light.position - worldPos;
-    //    float  dist    = length(toLight);
-    //    float3 L       = toLight / max(dist, 0.0001f);
-    //
-    //    float attenuation = 1.0f / max(dist * dist, 0.0001f);
-    //    if (light.radius > 0.0f)
-    //        attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
-    //
-    //    float pointNdotL = max(dot(N, L), 0.0f);
-    //
-    //    direct += albedo * light.color * light.intensity * pointNdotL * attenuation;
-    //}
-    // TODO : Imlm light system so the sun must be a light AND NOT HARDCODED.
+    for (uint i = 0; i < numLights; ++i)
+    {
+        Light light = lightBuffer[i];
+    
+        float3 toLight = light.position - worldPos;
+        if (light.type == ELightType.Sun)
+            toLight = -light.direction;
+
+        float  dist    = light.type == ELightType.Sun ? 1.0f : length(toLight);
+        float3 L       = toLight / max(dist, 0.0001f);
+    
+        float attenuation = 1.0f / max(dist * dist, 0.0001f);
+        if (light.radius > 0.0f)
+            attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
+    
+        float NdotL = max(dot(N, L), 0.0f);
+    
+        float3 current = albedo * light.color * light.intensity * NdotL * attenuation;
+        if (i == 0)
+            current *= shadow;
+
+        direct += current;
+    }
 
 
     float3 hdrResult = gi + direct;
