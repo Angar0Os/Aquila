@@ -1,5 +1,4 @@
-﻿[[vk::binding(0, 0)]]
-cbuffer UniformBufferObject
+﻿struct UniformBufferObject
 {
     float4x4 view;
     float4x4 proj;
@@ -10,12 +9,17 @@ cbuffer UniformBufferObject
     uint     frameCount;
 };
 
-[[vk::push_constant]]
-cbuffer PushConstants {
+[[vk::binding(0, 0)]]
+ConstantBuffer<UniformBufferObject> ubo;
+
+struct PushConstants {
     float4x4 model;
     float4x4 prevModel;
     uint     materialId;
 };
+
+[[vk::push_constant]]
+ConstantBuffer<PushConstants> pc;
 
 struct MaterialGPUData
 {
@@ -57,15 +61,15 @@ VSOutput vertMain(VSInput input)
 {
     VSOutput o;
 
-    float4 worldPos4     = mul(model,     float4(input.position, 1.0));
-    float4 prevWorldPos4 = mul(prevModel, float4(input.position, 1.0));
+    float4 worldPos4     = mul(pc.model,     float4(input.position, 1.0));
+    float4 prevWorldPos4 = mul(pc.prevModel, float4(input.position, 1.0));
 
-    float4 clipPos     = mul(proj, mul(view, worldPos4));
-    float4 prevClipPos = mul(prevViewProj, prevWorldPos4);
+    float4 clipPos = mul(ubo.proj, mul(ubo.view, worldPos4));
+    float4 prevClipPos = mul(ubo.prevViewProj, prevWorldPos4);
 
     o.position    = clipPos;
     o.worldPos    = worldPos4.xyz;
-    o.normal      = normalize(mul((float3x3)model, input.normal));
+    o.normal      = normalize(mul((float3x3)pc.model, input.normal));
     o.uv          = input.uv;
     o.clipPosCur  = clipPos;
     o.clipPosPrev = prevClipPos;
@@ -78,7 +82,7 @@ FSOutput fragMain(VSOutput input)
 {
     FSOutput o;
 
-    MaterialGPUData mat = materials[materialId];
+    MaterialGPUData mat = materials[pc.materialId];
 
     float4 albedoSample = bindlessTextures[mat.textures.x].Sample(input.uv);
     float4 ormSample     = bindlessTextures[mat.textures.z].Sample(input.uv);

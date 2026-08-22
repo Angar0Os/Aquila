@@ -5,12 +5,14 @@ Sampler2D inputTex;
 [[vk::image_format("rgba16f")]]
 RWTexture2D<float4> outputTex;
 
-[[vk::push_constant]]
-cbuffer FXAAPushConstants
+struct FXAAPushConstants
 {
     float2 texelSize;
     float2 _pad;
 };
+
+[[vk::push_constant]]
+ConstantBuffer<FXAAPushConstants> pc;
 
 static const float EDGE_THRESHOLD_MIN = 0.0312f;
 static const float EDGE_THRESHOLD_MAX = 0.125f;
@@ -37,15 +39,15 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     if (dispatchThreadID.x >= width || dispatchThreadID.y >= height)
         return;
 
-    float2 uv = (float2(dispatchThreadID.xy) + 0.5f) * texelSize;
+    float2 uv = (float2(dispatchThreadID.xy) + 0.5f) * pc.texelSize;
 
     float3 colorCenter = SampleColor(uv);
 
     float lumaCenter = Luma(colorCenter);
-    float lumaUp     = Luma(SampleColor(uv + float2(0.0f, -texelSize.y)));
-    float lumaDown    = Luma(SampleColor(uv + float2(0.0f,  texelSize.y)));
-    float lumaLeft    = Luma(SampleColor(uv + float2(-texelSize.x, 0.0f)));
-    float lumaRight    = Luma(SampleColor(uv + float2( texelSize.x, 0.0f)));
+    float lumaUp = Luma(SampleColor(uv + float2(0.0f, -pc.texelSize.y)));
+    float lumaDown = Luma(SampleColor(uv + float2(0.0f, pc.texelSize.y)));
+    float lumaLeft = Luma(SampleColor(uv + float2(-pc.texelSize.x, 0.0f)));
+    float lumaRight = Luma(SampleColor(uv + float2(pc.texelSize.x, 0.0f)));
 
     float lumaMin = min(lumaCenter, min(min(lumaUp, lumaDown), min(lumaLeft, lumaRight)));
     float lumaMax = max(lumaCenter, max(max(lumaUp, lumaDown), max(lumaLeft, lumaRight)));
@@ -58,10 +60,10 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
         return;
     }
 
-    float lumaUpLeft    = Luma(SampleColor(uv + float2(-texelSize.x, -texelSize.y)));
-    float lumaUpRight   = Luma(SampleColor(uv + float2( texelSize.x, -texelSize.y)));
-    float lumaDownLeft  = Luma(SampleColor(uv + float2(-texelSize.x,  texelSize.y)));
-    float lumaDownRight = Luma(SampleColor(uv + float2( texelSize.x,  texelSize.y)));
+    float lumaUpLeft    = Luma(SampleColor(uv + float2(-pc.texelSize.x, -pc.texelSize.y)));
+    float lumaUpRight   = Luma(SampleColor(uv + float2( pc.texelSize.x, -pc.texelSize.y)));
+    float lumaDownLeft  = Luma(SampleColor(uv + float2(-pc.texelSize.x,  pc.texelSize.y)));
+    float lumaDownRight = Luma(SampleColor(uv + float2( pc.texelSize.x,  pc.texelSize.y)));
 
     float lumaDownUp    = lumaDown + lumaUp;
     float lumaLeftRight = lumaLeft + lumaRight;
@@ -92,7 +94,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     bool  is1Steepest = abs(gradient1) >= abs(gradient2);
     float gradientScaled = 0.25f * max(abs(gradient1), abs(gradient2));
 
-    float stepLength = isHorizontal ? texelSize.y : texelSize.x;
+    float stepLength = isHorizontal ? pc.texelSize.y : pc.texelSize.x;
     float lumaLocalAverage = 0.0f;
 
     if (is1Steepest)
@@ -111,7 +113,7 @@ void cs_main(uint3 dispatchThreadID : SV_DispatchThreadID)
     else
         currentUv.x += stepLength * 0.5f;
 
-    float2 offset = isHorizontal ? float2(texelSize.x, 0.0f) : float2(0.0f, texelSize.y);
+    float2 offset = isHorizontal ? float2(pc.texelSize.x, 0.0f) : float2(0.0f, pc.texelSize.y);
 
     float2 uv1 = currentUv - offset;
     float2 uv2 = currentUv + offset;

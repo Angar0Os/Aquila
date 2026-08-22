@@ -1,5 +1,4 @@
-[[vk::binding(0, 0)]]
-cbuffer UniformBufferObject
+struct UniformBufferObject
 {
     float4x4 view;
     float4x4 proj;
@@ -9,6 +8,9 @@ cbuffer UniformBufferObject
     float4   viewPos;
     uint     frameCount;
 };
+
+[[vk::binding(0, 0)]]
+ConstantBuffer<UniformBufferObject> ubo;
 
 enum ELightType
 {
@@ -32,17 +34,19 @@ struct Light
 [[vk::binding(3, 0)]] RaytracingAccelerationStructure tlas;
 [[vk::binding(4, 0)]] RWTexture2D<float> outShadowMask;
 
-[[vk::push_constant]]
-cbuffer ShadowPushConstants
+struct ShadowPushConstants
 {
     Light* lightBuffer;
     float  maxDistance;
 };
 
+[[vk::push_constant]]
+ConstantBuffer<ShadowPushConstants> pc;
+
 float3 ReconstructPosition(float2 uv, float depth)
 {
-    float4 clipPos  = float4(uv * 2.0f - 1.0f.xx, depth, 1.0f);
-    float4 worldPos = mul(viewProjInverse, clipPos); 
+    float4 clipPos = float4(uv * 2.0f - 1.0f.xx, depth, 1.0f);
+    float4 worldPos = mul(ubo.viewProjInverse, clipPos); 
     return worldPos.xyz / worldPos.w;
 }
 
@@ -86,12 +90,12 @@ void cs_main(uint3 threadId : SV_DispatchThreadID)
 
     float3 origin = worldPos + N * 5e-3f;
 
-    float3 toLight = lightBuffer[0].position - worldPos;
-    float maxDist = distance(worldPos, lightBuffer[0].position);
-    if (lightBuffer[0].type == ELightType.Sun)
+    float3 toLight = pc.lightBuffer[0].position - worldPos;
+    float maxDist = distance(worldPos, pc.lightBuffer[0].position);
+    if (pc.lightBuffer[0].type == ELightType.Sun)
     {
-        toLight = -lightBuffer[0].direction;
-        maxDist = maxDistance;
+        toLight = -pc.lightBuffer[0].direction;
+        maxDist = pc.maxDistance;
     }
 
     bool occluded = TraceOcclusion(origin, normalize(toLight), maxDist);

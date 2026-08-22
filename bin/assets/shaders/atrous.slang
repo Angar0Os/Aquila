@@ -11,14 +11,16 @@ Sampler2D gNormal;
 [[vk::image_format("rgba16f")]]
 RWTexture2D<float4> gOutput;
 
-[[vk::push_constant]]
-cbuffer ATrousPushConstants
+struct ATrousPushConstants
 {
     int   stepSize;
     float sigmaDepth;
     float sigmaNormal;
     float _pad;
 };
+
+[[vk::push_constant]]
+ConstantBuffer<ATrousPushConstants> pc;
 
 static const float kernel[5] = { 1.0f/16.0f, 4.0f/16.0f, 6.0f/16.0f, 4.0f/16.0f, 1.0f/16.0f };
 
@@ -52,7 +54,7 @@ void cs_main(uint3 id : SV_DispatchThreadID)
     {
         for (int x = -2; x <= 2; ++x)
         {
-            float2 offset = float2(x, y) * float(stepSize) * texel;
+            float2 offset = float2(x, y) * float(pc.stepSize) * texel;
             float2 sampleUV = centerUV + offset;
 
             float3 sampleColor  = gInput.SampleLevel(sampleUV, 0).rgb;
@@ -61,8 +63,8 @@ void cs_main(uint3 id : SV_DispatchThreadID)
 
             float kernelWeight = kernel[x + 2] * kernel[y + 2];
 
-            float depthWeight  = exp(-abs(centerDepth - sampleDepth) / max(sigmaDepth, 1e-5f));
-            float normalWeight = pow(saturate(dot(centerNormal, sampleNormal)), sigmaNormal);
+            float depthWeight  = exp(-abs(centerDepth - sampleDepth) / max(pc.sigmaDepth, 1e-5f));
+            float normalWeight = pow(saturate(dot(centerNormal, sampleNormal)), pc.sigmaNormal);
 
             float w = kernelWeight * depthWeight * normalWeight;
 

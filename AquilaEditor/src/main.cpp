@@ -93,11 +93,31 @@ int main(int argc, char** argv)
             renderer->GetMaterialLibrary()
         );
 
+    glm::vec3 sunDirection = glm::normalize(glm::vec3(-0.1f, -0.9f, -0.3f));
+    graphics::render::GPULight sun
+    {
+        .position = glm::vec3(0.0f),
+        .type = core::gpu::utils::ELightType::Sun,
+        .direction = sunDirection,
+        .color = glm::vec3(1.0f),
+        .intensity = 1.0f
+    };
+
+    graphics::render::GPULight light
+    {
+        .position = glm::vec3(3.0f, 5.5f, 3.0f),
+        .type = core::gpu::utils::ELightType::Point,
+        .direction = glm::vec3(0.0f),
+        .radius = 0.0f,
+        .color = glm::vec3(1.0f, 0.2f, 1.0f),
+        .intensity = 100.0f
+    };
+
+
     std::vector<glm::mat4> meshTransforms(testScene.size(), glm::mat4(1.0f));
 
     glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 10.0f);
     glm::vec3 cameraTarget = glm::vec3(5.3603, -1.4502, -2.02124);
-    glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -0.2f, -0.3f));
 
     mapper.Action("NewTimeline") = std::function<void()>([&]() {
         if (!input.IsKeyHeld(
@@ -124,7 +144,7 @@ int main(int argc, char** argv)
             meshPositions,
             cameraPos,
             cameraTarget,
-            sunDir
+            sunDirection
         );
 
         std::cout << "Created timeline: " << timelinePath << "\n";
@@ -168,26 +188,6 @@ int main(int argc, char** argv)
 
     constexpr float CameraSpeed = 5.0f;
     constexpr float CameraLookSpeed = 3.0f;
-
-    glm::vec3 m_sunDirection = glm::normalize(glm::vec3(-0.1f, -0.9f, -0.3f));
-    graphics::render::GPULight sun
-    {
-        .position = glm::vec3(0.0f),
-        .type = core::gpu::utils::ELightType::Sun,
-        .direction = m_sunDirection,
-        .color = glm::vec3(1.0f),
-        .intensity = 1.0f
-    };
-
-    graphics::render::GPULight light
-    {
-        .position = glm::vec3(3.0f, 5.5f, 3.0f),
-        .type = core::gpu::utils::ELightType::Point,
-        .direction = glm::vec3(0.0f),
-        .radius = 0.0f,
-        .color = glm::vec3(1.0f, 0.2f, 1.0f),
-        .intensity = 100.0f
-    };
 
     while (!window->ShouldClose())
     {

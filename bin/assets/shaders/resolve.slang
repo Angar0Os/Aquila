@@ -1,5 +1,4 @@
-[[vk::binding(0, 0)]]
-cbuffer UniformBufferObject
+struct UniformBufferObject
 {
     float4x4 view;
     float4x4 proj;
@@ -9,6 +8,9 @@ cbuffer UniformBufferObject
     float4 viewPos;
     uint frameCount;
 };
+
+[[vk::binding(0, 0)]]
+ConstantBuffer<UniformBufferObject> ubo;
 
 enum ELightType
 {
@@ -48,12 +50,14 @@ Sampler2D depthTex;
 [[vk::binding(7, 0)]]
 Sampler2D envMapRaw;
 
-[[vk::push_constant]]
-cbuffer ResolvePushConstants
+struct ResolvePushConstants
 {
     Light *lightBuffer;
     uint numLights;
 };
+
+[[vk::push_constant]]
+ConstantBuffer<ResolvePushConstants> pc;
 
 static const float  exposure = 1.0f;
 
@@ -67,7 +71,7 @@ float2 DirectionToEquirectUV(float3 dir)
 float3 ReconstructPosition(float2 uv, float depth)
 {
     float4 clipPos = float4(uv * 2.0f - 1.0f, depth, 1.0f);
-    float4 worldPos = mul(viewProjInverse, clipPos);
+    float4 worldPos = mul(ubo.viewProjInverse, clipPos);
     return worldPos.xyz / worldPos.w;
 }
 
@@ -98,7 +102,7 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
     if (depth >= 1.0f)
     {
         float3 farPos = ReconstructPosition(uv, 1.0f);
-        float3 viewDir = normalize(farPos - viewPos.xyz);
+        float3 viewDir = normalize(farPos - ubo.viewPos.xyz);
         float2 envUV = DirectionToEquirectUV(viewDir);
         float3 skyHdr = envMapRaw.SampleLevel(envUV, 0).rgb * 0.1f;
         outImage[coord] = float4(ACESFilm(skyHdr, exposure), 1.0);
@@ -112,9 +116,9 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
     float3 worldPos = ReconstructPosition(uv, depth);
     float3 direct = 0.0f.xxx;
 
-    for (uint i = 0; i < numLights; ++i)
+    for (uint i = 0; i < pc.numLights; ++i)
     {
-        Light light = lightBuffer[i];
+        Light light = pc.lightBuffer[i];
     
         float3 toLight = light.position - worldPos;
         if (light.type == ELightType.Sun)
