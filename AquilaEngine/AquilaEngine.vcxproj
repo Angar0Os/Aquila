@@ -54,6 +54,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="..\MSBuildCustomizations\SlangCompile.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -294,15 +295,29 @@
     <ClInclude Include="src\core\input\utils\input_converters.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\bin\assets\shaders\atrous.slang" />
-    <None Include="..\bin\assets\shaders\fxaa.slang" />
-    <None Include="..\bin\assets\shaders\gbuffer.slang" />
-    <None Include="..\bin\assets\shaders\gi.slang" />
-    <None Include="..\bin\assets\shaders\irradiance_convolution.slang" />
-    <None Include="..\bin\assets\shaders\resolve.slang" />
-    <None Include="..\bin\assets\shaders\shadow.slang" />
+    <SlangCompileTask Include="..\bin\assets\shaders\atrous.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\fxaa.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\gbuffer.slang">
+      <FileType>Document</FileType>
+      <Entrypoints Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vertMain;fragMain</Entrypoints>
+      <Entrypoints Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vertMain;fragMain</Entrypoints>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\gi.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\resolve.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\shadow.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\MSBuildCustomizations\SlangCompile.targets" />
   </ImportGroup>
 </Project>

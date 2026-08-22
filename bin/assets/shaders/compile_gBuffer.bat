@@ -1,7 +1,7 @@
 @echo off
 set SCRIPT_DIR=%~dp0
 
-"%VULKAN_SDK%/Bin/slangc.exe" "%SCRIPT_DIR%gbuffer.slang" ^
+"C:\VulkanSDK\1.4.350.0\Bin\slangc.exe" "%SCRIPT_DIR%gbuffer.slang" ^
 -target spirv ^
 -profile spirv_1_4 ^
 -emit-spirv-directly ^

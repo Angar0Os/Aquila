@@ -1,5 +1,7 @@
 #include "input_converters.h"
 
+#include <GLFW/glfw3.h>
+
 int core::input::utils::ToGLFW(E_KEYS _key)
 {
 	switch (_key)

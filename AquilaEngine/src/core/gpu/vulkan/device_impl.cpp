@@ -379,11 +379,11 @@ void Device::Impl::CreateLogicalDevice()
 	vk::PhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures{};
 	bufferDeviceAddressFeatures.bufferDeviceAddress = VK_TRUE;
 	bufferDeviceAddressFeatures.pNext = &descriptorIndexingFeatures;
-
+	
 	vk::StructureChain featureChain = {
 		vk::PhysicalDeviceFeatures2 {.features = {.samplerAnisotropy = true, .shaderInt64 = true, } },
 		vk::PhysicalDeviceVulkan11Features {.shaderDrawParameters = true},
-		vk::PhysicalDeviceVulkan13Features {.synchronization2 = true, .dynamicRendering = true},
+		vk::PhysicalDeviceVulkan13Features {.shaderDemoteToHelperInvocation = true, .synchronization2 = true, .dynamicRendering = true},
 		vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT {.extendedDynamicState = true},
 		vk::PhysicalDeviceComputeShaderDerivativesFeaturesKHR {.computeDerivativeGroupQuads = true }
 	};
@@ -505,8 +505,8 @@ void Device::Impl::CreateSyncObjects()
 	vk::SemaphoreCreateInfo semInfo{};
 	vk::FenceCreateInfo fenceInfo{ .flags = vk::FenceCreateFlagBits::eSignaled };
 
-	frameSyncObjects.reserve(Device::FRAMES_IN_FLIGHT);
-	for (size_t i = 0; i < Device::FRAMES_IN_FLIGHT; ++i)
+	frameSyncObjects.reserve(FRAMES_IN_FLIGHT);
+	for (size_t i = 0; i < FRAMES_IN_FLIGHT; ++i)
 	{
 		FrameSync frameSync{
 			.inFlightFence = vk::raii::Fence(device, fenceInfo),
@@ -517,8 +517,7 @@ void Device::Impl::CreateSyncObjects()
 		frameSyncObjects.push_back(std::move(frameSync));
 	}
 
-	uint32_t swapchainImageCount = swapchain.getImages().size();
-	tempCmdBufs.resize(::Device::FRAMES_IN_FLIGHT);
+	tempCmdBufs.resize(FRAMES_IN_FLIGHT);
 }
 
 void Device::Impl::RecreateSwapchain()
@@ -609,7 +608,6 @@ Image* Device::AcquireNextImage()
 		m_impl->RecreateSwapchain();
 	}
 
-	m_impl->device.waitForFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence, VK_TRUE, UINT64_MAX);
 	m_impl->device.resetFences(*m_impl->frameSyncObjects[currentFrame].inFlightFence);
 
 	if (currentFrame >= m_impl->frameSyncObjects.size())

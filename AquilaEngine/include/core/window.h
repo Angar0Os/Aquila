@@ -12,7 +12,7 @@ namespace core
 	struct WindowDesc
 	{
 		std::string appName;
-		glm::vec2	windowSize;
+		glm::ivec2	windowSize;
 		bool		isFullscreen	= false;
 		bool		isResizable		= false;
 		bool		exclusiveFullscreen = false;

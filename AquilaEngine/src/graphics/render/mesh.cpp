@@ -33,8 +33,8 @@ void Mesh::CreateBuffers()
 		std::cerr << "ERROR : Invalid _instance infos. Vertices or Indices are empty ! " << std::endl;
 	}
 
-	auto vertexBufferSize = instance.vertices.size() * sizeof(Vertex);
-	auto indicesBufferSize = instance.indices.size() * sizeof(uint32_t);
+	auto vertexBufferSize = static_cast<uint32_t>(instance.vertices.size() * sizeof(Vertex));
+	auto indicesBufferSize = static_cast<uint32_t>(instance.indices.size() * sizeof(uint32_t));
 
 	core::gpu::BufferCreateInfo stagingVertexInfo{
 		.size = vertexBufferSize,

@@ -24,7 +24,7 @@ using namespace graphics::render;
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/gBuffer.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/gBuffer.slang.spv");
 
 	core::gpu::VertexInputBinding vertexBinding{
 			.binding = 0,
@@ -74,7 +74,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildShadowPipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/shadow.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/shadow.slang.spv");
 
 	std::vector<core::gpu::PushConstantRange> pushConstants = {
 		{
@@ -95,7 +95,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildShadowPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGIPipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/gi.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/gi.slang.spv");
 
 	std::vector<core::gpu::PushConstantRange> pushConstants = {
 		{
@@ -116,7 +116,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGIPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildResolvePipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/resolve.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/resolve.slang.spv");
 
 	core::gpu::PipelineCreateInfo pipelineInfo{};
 	pipelineInfo.shaderStages = { { core::gpu::utils::EShaderStageFlags::Compute, shaderCode, "cs_main" } };
@@ -137,7 +137,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildResolvePipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildFXAAPipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/fxaa.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/fxaa.slang.spv");
 
 	std::vector<core::gpu::PushConstantRange> pushConstants = {
 		{.stageFlags = static_cast<uint32_t>(core::gpu::utils::EShaderStageFlags::Compute),
@@ -155,7 +155,7 @@ std::unique_ptr<core::gpu::Pipeline> Renderer::BuildFXAAPipeline()
 
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildATrousPipeline()
 {
-	auto shaderCode = loaders::ReadFile("assets/shaders/atrous.spv");
+	auto shaderCode = loaders::ReadFile("assets/shaders/atrous.slang.spv");
 
 	std::vector<core::gpu::PushConstantRange> pushConstants = {
 		{
@@ -935,7 +935,7 @@ void Renderer::DrawGBuffer(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_gBufferPipeline);
 	_cmdBuf.Bind(*gBufferDescriptorSets[m_device.currentFrame], *m_gBufferPipeline, 0u);
 	_cmdBuf.Bind(*materialDescriptorSet, *m_gBufferPipeline, 1u);
-	_cmdBuf.SetViewport(0.0f, 0.0f, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second, 0.0f, 1.0f);
+	_cmdBuf.SetViewport(0.0f, 0.0f, static_cast<float>(m_device.GetSwapchainExtent().first), static_cast<float>(m_device.GetSwapchainExtent().second), 0.0f, 1.0f);
 	_cmdBuf.SetScissor(0, 0, m_device.GetSwapchainExtent().first, m_device.GetSwapchainExtent().second);
 
 	if (!m_meshInstances.empty())
@@ -1048,7 +1048,7 @@ void Renderer::DrawGI(core::gpu::CommandBuffer& _cmdBuf)
 	GIPushConstants pc{};
 	pc.sampleCount = 4;
 	pc.maxDistance = 50.0f;
-	pc.numLights = m_gpuLights.size();
+	pc.numLights = static_cast<uint32_t>(m_gpuLights.size());
 	pc.lightBuffer = lightBuffer->GetDeviceAddress();
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_giPipeline);
@@ -1084,7 +1084,7 @@ void Renderer::DrawResolve(core::gpu::CommandBuffer& _cmdBuf)
 	_cmdBuf.Bind(*resolveDescriptorSets[m_device.currentFrame], *m_resolvePipeline, 0u);
 
 	ResolvePushConstants pc{};
-	pc.numLights = m_gpuLights.size();
+	pc.numLights = static_cast<uint32_t>(m_gpuLights.size());
 	pc.lightBuffer = lightBuffer->GetDeviceAddress();
 
 	_cmdBuf.PushConstants(

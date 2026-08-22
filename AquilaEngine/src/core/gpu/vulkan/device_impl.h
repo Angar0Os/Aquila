@@ -70,7 +70,7 @@ namespace core::gpu
 		std::vector<vk::raii::ImageView>    swapchainImageViews;
 		vk::Extent2D						swapchainExtent;
 		std::vector<std::unique_ptr<Image>>	swapchainImages;
-		vk::Format							swapchainImageFormat;
+		vk::Format							swapchainImageFormat = vk::Format::eR8G8B8A8Srgb;
 
 		std::unique_ptr<DescriptorPool>		descriptorPool;
 		std::unique_ptr<CommandPool>		commandPool;

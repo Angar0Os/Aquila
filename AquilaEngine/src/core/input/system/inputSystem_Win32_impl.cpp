@@ -1,11 +1,11 @@
 #include "inputSystem_Win32_impl.h"
 #include "../utils/input_converters.h"
 
-#include <GLFW/glfw3.h>
-
 #pragma comment(lib, "Xinput9_1_0.lib")
 
 #include <memory>
+
+#include <GLFW/glfw3.h>
 
 using namespace core::input::system;
 

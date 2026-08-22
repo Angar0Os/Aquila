@@ -143,8 +143,8 @@ void AccelerationStructure::CreateBottomLevel(const Device& _device, const Accel
 	if (m_impl->buildSizes.accelerationStructureSize == 0)
 		throw std::runtime_error("getAccelerationStructureBuildSizesKHR returned zero accelerationStructureSize");
 
-	CreateAccelerationStructureBuffer(_device, m_impl->buildSizes.accelerationStructureSize);
-	CreateScratchBuffer(_device, m_impl->buildSizes.buildScratchSize);
+	CreateAccelerationStructureBuffer(_device, static_cast<uint32_t>(m_impl->buildSizes.accelerationStructureSize));
+	CreateScratchBuffer(_device, static_cast<uint32_t>(m_impl->buildSizes.buildScratchSize));
 
 	vk::AccelerationStructureCreateInfoKHR createInfo{};
 	createInfo.buffer = *m_impl->buffer->GetImpl().buffer;
@@ -219,8 +219,8 @@ void AccelerationStructure::CreateTopLevel(const Device& _device, const Accelera
 	if (m_impl->buildSizes.accelerationStructureSize == 0)
 		throw std::runtime_error("getAccelerationStructureBuildSizesKHR returned zero accelerationStructureSize (TLAS)");
 
-	CreateAccelerationStructureBuffer(_device, m_impl->buildSizes.accelerationStructureSize);
-	CreateScratchBuffer(_device, m_impl->buildSizes.buildScratchSize);
+	CreateAccelerationStructureBuffer(_device, static_cast<uint32_t>(m_impl->buildSizes.accelerationStructureSize));
+	CreateScratchBuffer(_device, static_cast<uint32_t>(m_impl->buildSizes.buildScratchSize));
 
 	vk::AccelerationStructureCreateInfoKHR createInfo{};
 	createInfo.buffer = *m_impl->buffer->GetImpl().buffer;

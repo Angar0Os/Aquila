@@ -7,7 +7,7 @@ using namespace audio;
 AudioSystem::AudioSystem()
     : m_impl(new Impl)
 {
-    BASS_Init(
+    auto init = BASS_Init(
         -1,
         65000,
         BASS_DEVICE_STEREO,
@@ -15,7 +15,7 @@ AudioSystem::AudioSystem()
         NULL
     );
 
-    if (!BASS_Init)
+    if (!init)
     {
         MessageBox(
             0,

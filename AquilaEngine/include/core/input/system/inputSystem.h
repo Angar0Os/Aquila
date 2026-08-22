@@ -5,7 +5,7 @@
 #include <memory>
 #include <core/input/utils/keys.h>
 
-#include <GLFW/glfw3.h>
+struct GLFWwindow;
 
 namespace core::input::system
 {
