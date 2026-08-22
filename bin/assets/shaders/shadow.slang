@@ -34,8 +34,8 @@ bool TraceOcclusion(float3 origin, float3 direction, float maxDist)
     RayDesc ray;
     ray.Origin    = origin;
     ray.Direction = direction;
-    ray.TMin      = 0.001f;
-    ray.TMax      = maxDist - 0.001f;
+    ray.TMin      = 0.0f;
+    ray.TMax      = maxDist;
 
     RayQuery<RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> q;
     q.TraceRayInline(tlas, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, 0xFF, ray);
@@ -67,8 +67,8 @@ void cs_main(uint3 threadId : SV_DispatchThreadID)
     float3 worldPos = ReconstructPosition(uv, depth);
     float3 N = normalize(normalRough.SampleLevel(uv, 0).xyz * 2.0f - 1.0f);
    
-    float3 origin = worldPos + N * 0.01f; 
-    bool   occluded = TraceOcclusion(origin, lightDirection, maxDistance);
+    float3 origin = worldPos + N * 5e-3f; 
+    bool   occluded = TraceOcclusion(origin, -lightDirection, maxDistance);
 
     outShadowMask[threadId.xy] = occluded ? 0.0f : 1.0f;
 }

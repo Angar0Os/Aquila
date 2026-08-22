@@ -217,6 +217,7 @@
     <ClCompile Include="src\core\gpu\vulkan\image_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\pipeline_impl.cpp" />
     <ClCompile Include="src\core\gpu\vulkan\texture_impl.cpp" />
+    <ClCompile Include="src\core\imgui\context.cpp" />
     <ClCompile Include="src\core\input\system\inputAction.cpp" />
     <ClCompile Include="src\core\input\system\inputMapper.cpp" />
     <ClCompile Include="src\core\input\system\inputSystem_Win32_impl.cpp" />
@@ -259,6 +260,7 @@
     <ClInclude Include="include\core\gpu\texture.h" />
     <ClInclude Include="include\core\gpu\utils\converters.h" />
     <ClInclude Include="include\core\gpu\utils\enums.h" />
+    <ClInclude Include="include\core\imgui\context.h" />
     <ClInclude Include="include\core\input\system\inputAction.h" />
     <ClInclude Include="include\core\input\system\inputMapper.h" />
     <ClInclude Include="include\core\input\system\inputSystem.h" />
@@ -284,6 +286,7 @@
     <ClInclude Include="src\core\gpu\vulkan\image_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\pipeline_impl.h" />
     <ClInclude Include="src\core\gpu\vulkan\texture_impl.h" />
+    <ClInclude Include="src\core\imgui\context_impl.h" />
     <ClInclude Include="src\core\input\system\inputSystem_Win32_impl.h" />
     <ClInclude Include="src\core\input\utils\input_converters.h" />
   </ItemGroup>

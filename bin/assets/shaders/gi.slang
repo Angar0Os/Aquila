@@ -231,8 +231,8 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         RayDesc ray;
         ray.Origin = rayOrigin;
         ray.Direction = rayDir;
-        ray.TMin = 0.05f;
-        ray.TMax = maxDistance - 0.05;
+        ray.TMin = 0.0f;
+        ray.TMax = maxDistance;
 
         RayQuery<RAY_FLAG_NONE> q;
         q.TraceRayInline(gTLAS, RAY_FLAG_NONE, 0xFF, ray);
@@ -241,7 +241,7 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
         if (q.CommittedStatus() == COMMITTED_NOTHING)
         {
             float2 envUV = DirectionToEquirectUV(rayDir);
-            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb;
+            radiance += throughput * gEnvironmentRaw.SampleLevel(envUV, 0).rgb * 0.1f;
             break;
         }
 
@@ -264,10 +264,10 @@ float3 TraceRadiance(float3 origin, float3 direction, inout uint seed)
 
         float3 approxAlbedo = SampleMaterialAlbedo(surface.material, surface.uv);
 
-        bool occluded = TraceOcclusion(hitPos + geoNormal * SURFACE_BIAS, sunDirection, maxDistance);
+        bool occluded = TraceOcclusion(hitPos + geoNormal * SURFACE_BIAS, -sunDirection, maxDistance);
         if (!occluded)
         {
-            float NdotL = max(dot(hitNormal, sunDirection), 0.0f);
+            float NdotL = max(dot(hitNormal, -sunDirection), 0.0f);
             radiance += throughput * (approxAlbedo / PI) * sunColor * NdotL;
         }
 

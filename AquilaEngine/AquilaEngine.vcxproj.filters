@@ -91,6 +91,12 @@
     <Filter Include="external\imPlot3D">
       <UniqueIdentifier>{6f1fce71-5c92-41b4-aa79-ee8d7c103943}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\core\imgui">
+      <UniqueIdentifier>{24da6ffe-4c97-481d-8f9a-c4baa61d32c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\core\imgui">
+      <UniqueIdentifier>{519cb04c-e3bc-4db5-9fb2-08567598e82d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\window.cpp">
@@ -200,6 +206,9 @@
     </ClCompile>
     <ClCompile Include="..\external\include\imPlot3D\implot3d.cpp">
       <Filter>external\imPlot3D</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\imgui\context.cpp">
+      <Filter>Source Files\core\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -373,6 +382,12 @@
     </ClInclude>
     <ClInclude Include="..\external\include\imPlot3D\implot3d_internal.h">
       <Filter>external\imPlot3D</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\imgui\context_impl.h">
+      <Filter>Source Files\core\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\imgui\context.h">
+      <Filter>Header Files\core\imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

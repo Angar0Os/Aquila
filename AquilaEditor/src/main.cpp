@@ -35,7 +35,7 @@ int main(int argc, char** argv)
         core::WindowDesc{
             .appName = "Aquila - Restir Showdown",
             .windowSize = { 1080, 720 },
-            .isFullscreen = true,
+            .isFullscreen = false,
             .isResizable = true,
             .exclusiveFullscreen = false
         }
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     glm::vec3 cameraPos = glm::vec3(0.0f, 4.0f, 10.0f);
     glm::vec3 cameraTarget = glm::vec3(5.3603, -1.4502, -2.02124);
-    glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -0.6f, -0.3f));
+    glm::vec3 sunDir = glm::normalize(glm::vec3(-1.0f, -0.2f, -0.3f));
 
     mapper.Action("NewTimeline") = std::function<void()>([&]() {
         if (!input.IsKeyHeld(
@@ -160,7 +160,7 @@ int main(int argc, char** argv)
     audioSystem->Play(
         audio::MusicInfo{
             .path = "assets/music/evoke_quentin.mp3",
-            .baseVolume = 1.0f,
+            .baseVolume = 0.1f,
             .tempo = 95.0f
         }
     );
@@ -265,23 +265,23 @@ int main(int argc, char** argv)
             cameraTarget += cameraLookMove;
         }
 
-        renderer->SetCamera(cameraPos);
+        renderer->SetCamera(cameraPos);  
         renderer->SetCameraTarget(cameraTarget);
 
         for (size_t i = 0; i < testScene.size(); ++i)
         {
             const std::string trackName = "mesh." + std::to_string(i) + ".pos";
-            const glm::vec4 position = timeline.Evaluate(trackName, row);
+            const glm::vec4 position = timeline.Evaluate(trackName, row); 
 
             meshTransforms[i] = glm::translate(glm::mat4(1.0f), glm::vec3(position));
         }
 
         const glm::vec4 timelineSun = timeline.Evaluate("sun.dir", row);
 
-        if (glm::length(glm::vec3(timelineSun)) > 0.0001f)
-        {
-            sunDir = glm::normalize(glm::vec3(timelineSun));
-        }
+        //if (glm::length(glm::vec3(timelineSun)) > 0.0001f)
+        //{
+        //    sunDir = glm::normalize(glm::vec3(timelineSun));
+        //}
 
         renderer->SetSunDirection(sunDir);
 

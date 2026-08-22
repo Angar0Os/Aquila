@@ -1096,7 +1096,7 @@ void Renderer::DrawShadow(core::gpu::CommandBuffer& _cmdBuf)
 	);
 
 	ShadowPushConstants pc{};
-	pc.lightDirection = -glm::normalize(m_sunDirection);
+	pc.lightDirection = glm::normalize(m_sunDirection);
 	pc.maxDistance = 10000.0f;
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_shadowPipeline);
@@ -1131,7 +1131,7 @@ void Renderer::DrawGI(core::gpu::CommandBuffer& _cmdBuf)
 	GIPushConstants pc{};
 	pc.sampleCount = 4;
 	pc.maxDistance = 50.0f;
-	pc.sunDirection = -glm::normalize(m_sunDirection);
+	pc.sunDirection = glm::normalize(m_sunDirection);
 	pc.sunColor = glm::vec3(1.0f);
 
 	_cmdBuf.Bind<core::gpu::Pipeline>(*m_giPipeline);

@@ -11,7 +11,7 @@ namespace audio
 	{
 		HSTREAM streamHandle	= NULL;
 
-		int		volume			= 0;
+		float		volume		= 0.0f;
 		float	tempo			= 0.0f;
 		double	rowRate			= 0.0f;
 		

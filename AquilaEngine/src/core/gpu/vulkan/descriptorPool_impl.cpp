@@ -9,7 +9,7 @@ DescriptorPool::DescriptorPool(const Device& device)
 	std::vector<vk::DescriptorPoolSize> poolSizes = {
 		{ vk::DescriptorType::eUniformBuffer,            1024 },
 		{ vk::DescriptorType::eStorageBuffer,            1024 },
-		{ vk::DescriptorType::eCombinedImageSampler,     16384 }, 
+		{ vk::DescriptorType::eCombinedImageSampler,     8192 }, 
 		{ vk::DescriptorType::eSampledImage,             1024 },
 		{ vk::DescriptorType::eStorageImage,             512  },
 		{ vk::DescriptorType::eUniformTexelBuffer,       256  },

@@ -98,7 +98,7 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
         float3 farPos = ReconstructPosition(uv, 1.0f);
         float3 viewDir = normalize(farPos - viewPos.xyz);
         float2 envUV = DirectionToEquirectUV(viewDir);
-        float3 skyHdr = envMapRaw.SampleLevel(envUV, 0).rgb;
+        float3 skyHdr = envMapRaw.SampleLevel(envUV, 0).rgb * 0.1f;
         outImage[coord] = float4(ACESFilm(skyHdr, exposure), 1.0);
         return;
     }
@@ -108,28 +108,29 @@ void cs_main(uint3 dispatchThreadID: SV_DispatchThreadID)
     float shadow = shadowMaskTex.SampleLevel(uv, 0).r;
 
     float NdotL = max(dot(N, -sunDir), 0.0);
-    float3 direct = albedo * sunColor * NdotL * shadow;
+    float3 direct = NdotL * shadow * sunColor * albedo;
     float3 worldPos = ReconstructPosition(uv, depth);
 
-    for (uint i = 0; i < numLights; ++i)
-    {
-        GPULight light = lights[i];
+    //for (uint i = 0; i < numLights; ++i)
+    //{
+    //    GPULight light = lights[i];
+    //
+    //    float3 toLight = light.position - worldPos;
+    //    float  dist    = length(toLight);
+    //    float3 L       = toLight / max(dist, 0.0001f);
+    //
+    //    float attenuation = 1.0f / max(dist * dist, 0.0001f);
+    //    if (light.radius > 0.0f)
+    //        attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
+    //
+    //    float pointNdotL = max(dot(N, L), 0.0f);
+    //
+    //    direct += albedo * light.color * light.intensity * pointNdotL * attenuation;
+    //}
+    // TODO : Imlm light system so the sun must be a light AND NOT HARDCODED.
 
-        float3 toLight = light.position - worldPos;
-        float  dist    = length(toLight);
-        float3 L       = toLight / max(dist, 0.0001f);
 
-        float attenuation = 1.0f / max(dist * dist, 0.0001f);
-        if (light.radius > 0.0f)
-            attenuation *= saturate(1.0f - pow(dist / light.radius, 4.0f));
-
-        float pointNdotL = max(dot(N, L), 0.0f);
-
-        direct += albedo * light.color * light.intensity * pointNdotL * attenuation;
-    }
-
-    float3 hdrResult = gi * direct;
+    float3 hdrResult = gi + direct;
     float3 ldrResult = ACESFilm(hdrResult, exposure);
-
     outImage[coord] = float4(ldrResult, 1.0);
 }
