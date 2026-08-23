@@ -292,13 +292,13 @@ int main(int argc, char** argv)
             cameraTarget += cameraLookMove;
         }
 
-        renderer->SetCamera(cameraPos);  
+        renderer->SetCamera(cameraPos);
         renderer->SetCameraTarget(cameraTarget);
 
         for (size_t i = 0; i < testScene.size(); ++i)
         {
             const std::string trackName = "mesh." + std::to_string(i) + ".pos";
-            const glm::vec4 position = timeline.Evaluate(trackName, row); 
+            const glm::vec4 position = timeline.Evaluate(trackName, row);
 
             meshTransforms[i] = glm::translate(glm::mat4(1.0f), glm::vec3(position));
         }
@@ -319,11 +319,16 @@ int main(int argc, char** argv)
         }
 
         renderer->Render(gpu->AcquireCommandBuffer(), *image); // TODO : Need to switch last transition from TransfertDst to ColorAttachment
-        
+
         auto cmdBuf = gpu->AcquireCommandBuffer();
-        imgui->BeginFrame(cmdBuf, image);
-        ImGui::ShowDemoWindow();
-        imgui->EndFrame(cmdBuf, image);
+
+        cmdBuf->Record([&]() {
+            imgui->BeginFrame(cmdBuf, image);
+            ImGui::ShowDemoWindow();
+            imgui->EndFrame(cmdBuf, image); 
+        }); 
+
+        cmdBuf->Submit(*gpu);
         gpu->ReleaseCommandBuffer(cmdBuf);
 
         gpu->Present();

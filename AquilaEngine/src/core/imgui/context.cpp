@@ -92,11 +92,7 @@ void Context::BeginFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _o
 		.clear = false
 	};
 
-	_cmdBuf->Record([&]() {
-		_cmdBuf->BeginRendering(m_device, { colorAttachment }, {});
-
-	});
-	_cmdBuf->Submit(m_device);
+	_cmdBuf->BeginRendering(m_device, { colorAttachment }, {});
 
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -114,15 +110,12 @@ void Context::EndFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _out
 
 	_cmdBuf->EndRendering();
 
-	_cmdBuf->Record([&]() {
-		_cmdBuf->TransitionImageLayout(
-			*_outputImage,
-			core::gpu::utils::EImageLayout::ColorAttachment,
-			core::gpu::utils::EImageLayout::Present,
-			false
-		);
-	});
-	_cmdBuf->Submit(m_device);
+	_cmdBuf->TransitionImageLayout(
+		*_outputImage,
+		core::gpu::utils::EImageLayout::ColorAttachment,
+		core::gpu::utils::EImageLayout::Present,
+		false
+	);
 }
 
 void Context::InitViewport(std::pair<uint32_t, uint32_t> _viewportSize)
