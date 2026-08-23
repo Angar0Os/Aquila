@@ -350,3 +350,16 @@ vk::DynamicState core::gpu::utils::ToVulkan(core::gpu::utils::EDynamicState stat
 		default:													return vk::DynamicState::eViewport;
 	}
 }
+
+core::gpu::utils::ETextureFormat core::gpu::utils::FromVulkan(vk::Format format)
+{
+	switch (format)
+	{
+		case vk::Format::eB8G8R8A8Srgb:		return core::gpu::utils::ETextureFormat::RGBA8_SRGB;
+		case vk::Format::eR8G8B8A8Srgb:		return core::gpu::utils::ETextureFormat::RGBA8_SRGB;
+		case vk::Format::eR8G8B8A8Unorm:	return core::gpu::utils::ETextureFormat::RGBA8_UNorm;
+		case vk::Format::eD32Sfloat:		return core::gpu::utils::ETextureFormat::Depth32F;
+		case vk::Format::eD24UnormS8Uint:	return core::gpu::utils::ETextureFormat::Depth24Stencil8;
+		default:							return core::gpu::utils::ETextureFormat::Undefined;
+	}
+}

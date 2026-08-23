@@ -28,6 +28,7 @@ namespace core::gpu::utils
 	vk::DynamicState			ToVulkan(EDynamicState state);
 
 	vk::ImageAspectFlags        ToVulkanAspestMask(ETextureFormat format);
+	ETextureFormat				FromVulkan(vk::Format format);
 }
 
 #endif //AQUILA_ENGINE_CORE_GPU_UTILS_CONVERTERS_H

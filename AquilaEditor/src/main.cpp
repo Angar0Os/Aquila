@@ -12,9 +12,12 @@
 
 #include <core/window.h>
 #include <core/gpu/device.h>
+#include <core/gpu/commandBuffer.h>
 
 #include <core/input/system/inputSystem.h>
 #include <core/input/system/inputMapper.h>
+
+#include <core/imgui/context.h>
 
 #include <graphics/render/renderer.h>
 #include <graphics/render/mesh.h>
@@ -25,6 +28,8 @@
 #include <audio/audioSystem.h>
 
 #include <demo/syncTimeline.h>
+
+#include <imgui/imgui.h>
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
 
@@ -45,6 +50,7 @@ int main(int argc, char** argv)
     auto gpu = std::make_unique<core::gpu::Device>(*window);
     auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
     auto audioSystem = std::make_unique<audio::AudioSystem>();
+    auto imgui = std::make_unique<core::imgui::Context>(*window, *gpu);
 
     core::input::system::InputSystem input(window->GetHandle());
     core::input::system::InputMapper mapper;
@@ -312,7 +318,13 @@ int main(int argc, char** argv)
             continue;
         }
 
-        renderer->Render(gpu->AcquireCommandBuffer(), *image);
+        renderer->Render(gpu->AcquireCommandBuffer(), *image); // TODO : Need to switch last transition from TransfertDst to ColorAttachment
+        
+        auto cmdBuf = gpu->AcquireCommandBuffer();
+        imgui->BeginFrame(cmdBuf, image);
+        ImGui::ShowDemoWindow();
+        imgui->EndFrame(cmdBuf, image);
+        gpu->ReleaseCommandBuffer(cmdBuf);
 
         gpu->Present();
     }

@@ -22,6 +22,8 @@
 
 using namespace graphics::render;
 
+// TODO : I need to set a name for my render Passes.
+
 std::unique_ptr<core::gpu::Pipeline> Renderer::BuildGBufferPipeline()
 {
 	auto shaderCode = loaders::ReadFile("assets/shaders/gBuffer.slang.spv");
@@ -849,7 +851,7 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 			_cmdBuf->TransitionImageLayout(
 				_outputImage,
 				core::gpu::utils::EImageLayout::TransferDst,
-				core::gpu::utils::EImageLayout::Present,
+				core::gpu::utils::EImageLayout::ColorAttachment,
 				false
 			);
 		});
