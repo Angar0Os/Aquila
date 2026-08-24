@@ -17,7 +17,6 @@
 #include <core/input/system/inputSystem.h>
 #include <core/input/system/inputMapper.h>
 
-#include <core/imgui/context.h>
 
 #include <graphics/render/renderer.h>
 #include <graphics/render/mesh.h>
@@ -29,6 +28,7 @@
 
 #include <demo/syncTimeline.h>
 
+#include <imgui/context.h>
 #include <imgui/imgui.h>
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
@@ -50,14 +50,14 @@ int main(int argc, char** argv)
     auto gpu = std::make_unique<core::gpu::Device>(*window);
     auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
     auto audioSystem = std::make_unique<audio::AudioSystem>();
-    auto imgui = std::make_unique<core::imgui::Context>(*window, *gpu);
+    auto imgui = std::make_unique<imgui::Context>(*window, *gpu);
 
     core::input::system::InputSystem input(window->GetHandle());
     core::input::system::InputMapper mapper;
 
     mapper.SetContext("Debug");
 
-    mapper.Action("ToggleFullscreen") = core::input::utils::E_KEYS::KEY_F11;
+    mapper.Action("ToggleFullscreen") = core::input::utils::E_KEYS::KEY_F11; 
     mapper.Action("ToggleFullscreen") = std::function<void()>([&window]() {
          window->ToggleFullscreen();
     });
@@ -324,8 +324,15 @@ int main(int argc, char** argv)
 
         cmdBuf->Record([&]() {
             imgui->BeginFrame(cmdBuf, image);
-            ImGui::ShowDemoWindow();
+            ImGui::ShowDemoWindow();            
             imgui->EndFrame(cmdBuf, image); 
+
+            cmdBuf->TransitionImageLayout(
+                *image,
+                core::gpu::utils::EImageLayout::ColorAttachment,
+                core::gpu::utils::EImageLayout::Present,
+                false
+            );
         }); 
 
         cmdBuf->Submit(*gpu);
