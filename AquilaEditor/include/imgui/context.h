@@ -13,7 +13,8 @@ namespace imgui
 	struct ViewportInfo
 	{
 		std::unique_ptr<core::gpu::Image>	colorImage = nullptr;
-		VkDescriptorSet						dsSet = nullptr;
+		vk::raii::Sampler					sampler = nullptr;
+		VkDescriptorSet						dsSet = VK_NULL_HANDLE;
 		std::pair<uint32_t, uint32_t>		desiredSize = { 0, 0 };
 		bool								isUsable = false;
 	};
@@ -23,7 +24,9 @@ namespace imgui
 	private:
 		const core::gpu::Device& m_device;
 
+		ViewportInfo m_viewportInfo;
 		ViewportInfo* currentViewportState = nullptr;
+		VkDescriptorPool imguiDescriptorPool = VK_NULL_HANDLE;
 		void InitViewport(std::pair<uint32_t, uint32_t> _viewportSize);
 	public:
 		explicit Context(const core::Window& _window, const core::gpu::Device& _device);

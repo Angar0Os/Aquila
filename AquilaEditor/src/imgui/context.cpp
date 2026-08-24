@@ -10,6 +10,8 @@
 
 #include <core/gpu/utils/converters.h>
 
+#include "IconsMaterialDesignIcons.h"
+
 #include <core/window.h>
 
 using namespace core::gpu;
@@ -20,53 +22,106 @@ Context::Context(const core::Window& _window, const core::gpu::Device& _device)
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	
-	auto io = ImGui::GetIO();
+	ImGui::StyleColorsDark();
+
+	ImGuiIO& io = ImGui::GetIO();
+
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
+
+	io.Fonts->AddFontDefault();
+	static const ImWchar icons_ranges[] = { ICON_MIN_MDI, ICON_MAX_MDI, 0 };
+
+	
+
+	ImFontConfig icons_config_small;
+	icons_config_small.MergeMode = true;
+	icons_config_small.PixelSnapH = true;
+	icons_config_small.GlyphMinAdvanceX = 13.0f;
+	io.Fonts->AddFontFromFileTTF("assets/fonts/" FONT_ICON_FILE_NAME_MDI, 13.0f, &icons_config_small, icons_ranges);
+
+	ImFontConfig icons_config_large;
+	icons_config_large.PixelSnapH = true;
+	icons_config_large.GlyphMinAdvanceX = 50.0f;
+	io.Fonts->AddFontFromFileTTF("assets/fonts/" FONT_ICON_FILE_NAME_MDI, 50.0f, &icons_config_large, icons_ranges);
 
 	ImGui_ImplGlfw_InitForVulkan(_window.GetHandle(), true);
+
 	io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+	io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
 
+	VkDescriptorPoolSize pool_sizes[] =
+	{
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000 },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000 }
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+	pool_info.maxSets = 1000 * IM_ARRAYSIZE(pool_sizes);
+	pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	if (vkCreateDescriptorPool(*_device.GetImpl().device, &pool_info, nullptr, &imguiDescriptorPool) != VK_SUCCESS)
+		throw std::runtime_error("Failed to create ImGui descriptor pool");
+
+	ImGui_ImplVulkan_InitInfo init_info = {};
+	init_info.Instance = *_device.GetImpl().instance;
+	init_info.PhysicalDevice = *_device.GetImpl().physicalDevice;
+	init_info.Device = *_device.GetImpl().device;
+	init_info.QueueFamily = _device.GetImpl().queueIndex;
+	init_info.Queue = *_device.GetImpl().graphicsQueue;
+	init_info.DescriptorPool = imguiDescriptorPool;
+	init_info.MinImageCount = 2;
+	init_info.ImageCount = _device.GetImpl().swapchainImages.size();
+	init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	init_info.RenderPass = VK_NULL_HANDLE;
+	init_info.UseDynamicRendering = VK_TRUE;
+	init_info.PipelineRenderingCreateInfo = {};
+	init_info.PipelineRenderingCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+	init_info.PipelineRenderingCreateInfo.colorAttachmentCount = 1;
 	VkFormat format = static_cast<VkFormat>(_device.GetImpl().swapchainImageFormat);
-	ImGui_ImplVulkan_InitInfo initInfo
-	{
-		.Instance = *_device.GetImpl().instance,
-		.PhysicalDevice = *_device.GetImpl().physicalDevice,
-		.Device = *_device.GetImpl().device,
-		.QueueFamily = _device.GetImpl().queueIndex,
-		.Queue = *_device.GetImpl().graphicsQueue,
-		.DescriptorPool = *_device.GetImpl().descriptorPool->GetImpl().pool,
-		.RenderPass = VK_NULL_HANDLE,
-		.MinImageCount = 2,
-		.ImageCount = static_cast<uint32_t>(_device.GetImpl().swapchainImages.size()),
-		.MSAASamples = VK_SAMPLE_COUNT_1_BIT,
-		.UseDynamicRendering = VK_TRUE,
-		.PipelineRenderingCreateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-			.colorAttachmentCount = 1,
-			.pColorAttachmentFormats = &format,
-			.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT,
-		}
-	};
+	init_info.PipelineRenderingCreateInfo.pColorAttachmentFormats = &format;
+	init_info.PipelineRenderingCreateInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
 
-	ImGui_ImplVulkan_Init(&initInfo);
+	ImGui_ImplVulkan_Init(&init_info);
 
-	ViewportInfo infos
-	{
-		.colorImage = nullptr,
-		.dsSet = VK_NULL_HANDLE,
-		.desiredSize = { 0.0, 0.0 },
-		.isUsable = true
-	};
-
-	currentViewportState = &infos;
+	currentViewportState = &m_viewportInfo;
+	InitViewport({});
 }
 
 Context::~Context()
 {
+
+	if (m_viewportInfo.dsSet != VK_NULL_HANDLE)
+	{
+		ImGui_ImplVulkan_RemoveTexture(m_viewportInfo.dsSet);
+		m_viewportInfo.dsSet = VK_NULL_HANDLE;
+	}
+
+	m_viewportInfo.sampler = nullptr;
+	m_viewportInfo.colorImage.reset();
+
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+
+
+	if (imguiDescriptorPool != VK_NULL_HANDLE)
+	{
+		vkDestroyDescriptorPool(*m_device.GetImpl().device, imguiDescriptorPool, nullptr);
+		imguiDescriptorPool = VK_NULL_HANDLE;
+	}
 }
 
 void Context::BeginFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _outputImage)
@@ -104,7 +159,7 @@ void Context::BeginFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _o
 void Context::EndFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _outputImage)
 {
 	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *_cmdBuf->GetImpl().commandBuffer);	 
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *_cmdBuf->GetImpl().commandBuffer);
 	ImGui::EndFrame();
 
 	_cmdBuf->EndRendering();
@@ -112,12 +167,12 @@ void Context::EndFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _out
 
 void Context::InitViewport(std::pair<uint32_t, uint32_t> _viewportSize)
 {
-	currentViewportState->desiredSize = _viewportSize;
+	currentViewportState->desiredSize = std::pair<uint32_t, uint32_t>({ 1080, 720 });
 
 	core::gpu::ImageCreateInfo imageInfo
 	{
-		.width = _viewportSize.first,
-		.height = _viewportSize.second,
+		.width = currentViewportState->desiredSize.first,
+		.height = currentViewportState->desiredSize.second,
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.format = core::gpu::utils::FromVulkan(m_device.GetImpl().swapchainImageFormat),
@@ -146,12 +201,12 @@ void Context::InitViewport(std::pair<uint32_t, uint32_t> _viewportSize)
 	samplerInfo.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 	samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-	auto sampler = vk::raii::Sampler(m_device.GetImpl().device, samplerInfo);
+	currentViewportState->sampler = vk::raii::Sampler(m_device.GetImpl().device, samplerInfo);
 
 	if (currentViewportState->dsSet == VK_NULL_HANDLE)
 	{
 		currentViewportState->dsSet = ImGui_ImplVulkan_AddTexture(
-			*sampler,
+			*currentViewportState->sampler,
 			*currentViewportState->colorImage->GetImpl().view,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		);

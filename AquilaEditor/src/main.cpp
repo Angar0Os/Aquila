@@ -318,13 +318,14 @@ int main(int argc, char** argv)
             continue;
         }
 
-        renderer->Render(gpu->AcquireCommandBuffer(), *image); // TODO : Need to switch last transition from TransfertDst to ColorAttachment
 
         auto cmdBuf = gpu->AcquireCommandBuffer();
 
         cmdBuf->Record([&]() {
+            renderer->Render(cmdBuf, *image); 
+
             imgui->BeginFrame(cmdBuf, image);
-            ImGui::ShowDemoWindow();            
+            ImGui::ShowDemoWindow();
             imgui->EndFrame(cmdBuf, image); 
 
             cmdBuf->TransitionImageLayout(

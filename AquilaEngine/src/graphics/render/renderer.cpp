@@ -830,34 +830,16 @@ void Renderer::Render(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image& _outp
 
 	lightBuffer->CopyFrom(m_gpuLights.data(), sizeof(GPULight) * m_gpuLights.size());
 
-	_cmdBuf->Record([&]()
-		{
-			DrawGBuffer(*_cmdBuf);
-			DrawShadow(*_cmdBuf);
-			DrawGI(*_cmdBuf);
-			DrawATrous(*_cmdBuf);
-			DrawResolve(*_cmdBuf);
-			DrawFXAA(*_cmdBuf);
+	DrawGBuffer(*_cmdBuf);
+	DrawShadow(*_cmdBuf);
+	DrawGI(*_cmdBuf);
+	DrawATrous(*_cmdBuf);
+	DrawResolve(*_cmdBuf);
+	DrawFXAA(*_cmdBuf);
 
-			_cmdBuf->TransitionImageLayout(
-				_outputImage,
-				core::gpu::utils::EImageLayout::Undefined,
-				core::gpu::utils::EImageLayout::TransferDst,
-				false
-			);
-
-			_cmdBuf->BlitImage(*aaColorAttachments[0].image, _outputImage);
-
-			_cmdBuf->TransitionImageLayout(
-				_outputImage,
-				core::gpu::utils::EImageLayout::TransferDst,
-				core::gpu::utils::EImageLayout::ColorAttachment,
-				false
-			);
-		});
-
-	_cmdBuf->Submit(m_device, false);
-	m_device.ReleaseCommandBuffer(_cmdBuf);
+	_cmdBuf->TransitionImageLayout(_outputImage, core::gpu::utils::EImageLayout::Undefined, core::gpu::utils::EImageLayout::TransferDst, false);
+	_cmdBuf->BlitImage(*aaColorAttachments[0].image, _outputImage);
+	_cmdBuf->TransitionImageLayout(_outputImage, core::gpu::utils::EImageLayout::TransferDst, core::gpu::utils::EImageLayout::ColorAttachment, false);
 
 	m_meshInstances.clear();
 	m_gpuLights.clear();

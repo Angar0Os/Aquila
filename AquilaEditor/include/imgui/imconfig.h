@@ -147,4 +147,4 @@ namespace ImGui
 */
 
 #include <cstdint>
-#define ImTextureID uint32_t
+#define ImTextureID uint64_t
