@@ -33,6 +33,8 @@
 
 #pragma comment(lib, "AquilaEngine_x64_Debug")
 
+#define AQUILA_EDITOR
+
 int main(int argc, char** argv)
 {
     bool cameraDebugMode = true;
@@ -51,6 +53,7 @@ int main(int argc, char** argv)
     auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
     auto audioSystem = std::make_unique<audio::AudioSystem>();
     auto imgui = std::make_unique<imgui::Context>(*window, *gpu);
+    bool showUI = true;
 
     core::input::system::InputSystem input(window->GetHandle());
     core::input::system::InputMapper mapper;
@@ -80,6 +83,16 @@ int main(int argc, char** argv)
     mapper.Action("NextRows") = core::input::utils::E_KEYS::KEY_V;
     mapper.Action("NextRows") = std::function<void()>([&]() {
           audioSystem->SeekRows(10.0);
+    });
+    
+    mapper.Action("HideUI") = core::input::utils::E_KEYS::KEY_TAB;
+    mapper.Action("HideUI") = std::function<void()>([&]() {
+        showUI = !showUI;
+    });
+    
+    mapper.Action("Quit") = core::input::utils::E_KEYS::KEY_ESCAPE;
+    mapper.Action("Quit") = std::function<void()>([&]() {
+        window->Close();
     });
 
     mapper.Action("NewTimeline") = core::input::utils::E_KEYS::KEY_N;
@@ -323,11 +336,14 @@ int main(int argc, char** argv)
 
         cmdBuf->Record([&]() {
             renderer->Render(cmdBuf, *image); 
-
-            imgui->BeginFrame(cmdBuf, image);
-            ImGui::ShowDemoWindow();
-            imgui->EndFrame(cmdBuf, image); 
-
+#ifdef AQUILA_EDITOR
+            if (showUI)
+            {
+                imgui->BeginFrame(cmdBuf, image);
+                ImGui::ShowDemoWindow();
+                imgui->EndFrame(cmdBuf, image);
+            }
+#endif
             cmdBuf->TransitionImageLayout(
                 *image,
                 core::gpu::utils::EImageLayout::ColorAttachment,
