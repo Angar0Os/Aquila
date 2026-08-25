@@ -25,6 +25,12 @@
     <Filter Include="Header Files\imgui">
       <UniqueIdentifier>{bebbee9f-bab9-4fd1-963a-82b4a01ae8c4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\ui">
+      <UniqueIdentifier>{236f6ab5-c294-4cc4-91d8-b5d3a8218b08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ui">
+      <UniqueIdentifier>{4963b471-89ae-4b9e-92d3-1c27abf884f1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -60,6 +66,9 @@
     <ClCompile Include="src\imgui\imgui_demo.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui\viewport.cpp">
+      <Filter>Source Files\ui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\demo\syncTimeline.h">
@@ -94,6 +103,9 @@
     </ClInclude>
     <ClInclude Include="include\imgui\context.h">
       <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="include\ui\viewport.h">
+      <Filter>Header Files\ui</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -31,6 +31,8 @@
 #include <imgui/context.h>
 #include <imgui/imgui.h>
 
+#include <ui/viewport.h>
+
 #pragma comment(lib, "AquilaEngine_x64_Debug")
 
 #define AQUILA_EDITOR
@@ -38,7 +40,7 @@
 int main(int argc, char** argv)
 {
     bool cameraDebugMode = true;
- 
+
     auto window = std::make_unique<core::Window>(
         core::WindowDesc{
             .appName = "Aquila - Restir Showdown",
@@ -53,6 +55,7 @@ int main(int argc, char** argv)
     auto renderer = std::make_unique<graphics::render::Renderer>(*gpu);
     auto audioSystem = std::make_unique<audio::AudioSystem>();
     auto imgui = std::make_unique<imgui::Context>(*window, *gpu);
+    auto viewport = std::make_unique<ui::Viewport>(*window, *imgui, *renderer);
     bool showUI = true;
 
     core::input::system::InputSystem input(window->GetHandle());
@@ -60,40 +63,40 @@ int main(int argc, char** argv)
 
     mapper.SetContext("Debug");
 
-    mapper.Action("ToggleFullscreen") = core::input::utils::E_KEYS::KEY_F11; 
+    mapper.Action("ToggleFullscreen") = core::input::utils::E_KEYS::KEY_F11;
     mapper.Action("ToggleFullscreen") = std::function<void()>([&window]() {
-         window->ToggleFullscreen();
-    });
+        window->ToggleFullscreen();
+        });
 
     mapper.Action("ToggleMusic") = core::input::utils::E_KEYS::KEY_SPACE;
     mapper.Action("ToggleMusic") = std::function<void()>([&]() {
-         audioSystem->Pause();
-    });
+        audioSystem->Pause();
+        });
 
     mapper.Action("RestartMusic") = core::input::utils::E_KEYS::KEY_R;
     mapper.Action("RestartMusic") = std::function<void()>([&]() {
-          audioSystem->Restart();
-    });
+        audioSystem->Restart();
+        });
 
     mapper.Action("PreviousRows") = core::input::utils::E_KEYS::KEY_C;
     mapper.Action("PreviousRows") = std::function<void()>([&]() {
-          audioSystem->SeekRows(-10.0);
-    });
+        audioSystem->SeekRows(-10.0);
+        });
 
     mapper.Action("NextRows") = core::input::utils::E_KEYS::KEY_V;
     mapper.Action("NextRows") = std::function<void()>([&]() {
-          audioSystem->SeekRows(10.0);
-    });
-    
+        audioSystem->SeekRows(10.0);
+        });
+
     mapper.Action("HideUI") = core::input::utils::E_KEYS::KEY_TAB;
     mapper.Action("HideUI") = std::function<void()>([&]() {
         showUI = !showUI;
-    });
-    
+        });
+
     mapper.Action("Quit") = core::input::utils::E_KEYS::KEY_ESCAPE;
     mapper.Action("Quit") = std::function<void()>([&]() {
         window->Close();
-    });
+        });
 
     mapper.Action("NewTimeline") = core::input::utils::E_KEYS::KEY_N;
 
@@ -106,11 +109,11 @@ int main(int argc, char** argv)
     const std::string timelinePath = "assets/demo.timeline";
 
     auto testScene = loaders::MeshLoader::LoadGLTF(
-            *gpu,
-            "assets/models/testSceneQuentin.glb",
-            renderer->GetTextureLibrary(),
-            renderer->GetMaterialLibrary()
-        );
+        *gpu,
+        "assets/models/testSceneQuentin.glb",
+        renderer->GetTextureLibrary(),
+        renderer->GetMaterialLibrary()
+    );
 
     glm::vec3 sunDirection = glm::normalize(glm::vec3(-0.1f, -0.9f, -0.3f));
     graphics::render::GPULight sun
@@ -153,7 +156,7 @@ int main(int argc, char** argv)
 
         for (size_t i = 0; i < testScene.size(); ++i)
         {
-            meshTrackNames.push_back("mesh." + std::to_string(i)); 
+            meshTrackNames.push_back("mesh." + std::to_string(i));
             meshPositions.push_back(glm::vec3(meshTransforms[i][3]));
         }
 
@@ -167,7 +170,7 @@ int main(int argc, char** argv)
         );
 
         std::cout << "Created timeline: " << timelinePath << "\n";
-    });
+        });
 
 
     mapper.Action("DumpCamera") = core::input::utils::E_KEYS::KEY_Q;
@@ -177,7 +180,7 @@ int main(int argc, char** argv)
 
         timeline.AddKeyframeAndSave("camera.pos", row, glm::vec4(cameraPos, 0.0f));
         timeline.AddKeyframeAndSave("camera.target", row, glm::vec4(cameraTarget, 0.0f));
-    });
+        });
 
     mapper.PushContext("Debug");
 
@@ -193,17 +196,17 @@ int main(int argc, char** argv)
         std::cout << "No timeline found.\n" << "Press Ctrl+N to create: " << timelinePath << "\n";
     }
 
-   
+
 
     auto previousTime = std::chrono::steady_clock::now();
 
- /*   audioSystem->Play(
-        audio::MusicInfo{
-            .path = "assets/music/evoke_quentin.mp3",
-            .baseVolume = 0.1f,
-            .tempo = 95.0f
-        }
-    );*/
+    /*   audioSystem->Play(
+           audio::MusicInfo{
+               .path = "assets/music/evoke_quentin.mp3",
+               .baseVolume = 0.1f,
+               .tempo = 95.0f
+           }
+       );*/
 
     constexpr float CameraSpeed = 5.0f;
     constexpr float CameraLookSpeed = 3.0f;
@@ -334,23 +337,42 @@ int main(int argc, char** argv)
 
         auto cmdBuf = gpu->AcquireCommandBuffer();
 
-        cmdBuf->Record([&]() {
-            renderer->Render(cmdBuf, *image); 
-#ifdef AQUILA_EDITOR
-            if (showUI)
+        cmdBuf->Record([&]()
             {
-                imgui->BeginFrame(cmdBuf, image);
-                ImGui::ShowDemoWindow();
-                imgui->EndFrame(cmdBuf, image);
-            }
+#ifdef AQUILA_EDITOR
+
+                if (showUI)
+                {
+                    viewport->Render(cmdBuf);
+                    imgui->BeginFrame(cmdBuf, image);
+
+                    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+
+                    ImGui::DockSpaceOverViewport(
+                        0,
+                        mainViewport,
+                        ImGuiDockNodeFlags_PassthruCentralNode
+                    );
+
+                    viewport->Draw();
+
+                    imgui->EndFrame(cmdBuf, image);
+                }
+                else
+                {
+                    renderer->Render(cmdBuf, *image);
+                }
+
+#else
+                renderer->Render(cmdBuf, *image);
 #endif
-            cmdBuf->TransitionImageLayout(
-                *image,
-                core::gpu::utils::EImageLayout::ColorAttachment,
-                core::gpu::utils::EImageLayout::Present,
-                false
-            );
-        }); 
+                cmdBuf->TransitionImageLayout(
+                    *image,
+                    core::gpu::utils::EImageLayout::ColorAttachment,
+                    core::gpu::utils::EImageLayout::Present,
+                    false
+                );
+            });
 
         cmdBuf->Submit(*gpu);
         gpu->ReleaseCommandBuffer(cmdBuf);

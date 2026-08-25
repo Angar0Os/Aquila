@@ -9,10 +9,15 @@
 #include "../../../AquilaEngine/src/core/gpu/vulkan/image_impl.h"
 
 #include <core/gpu/utils/converters.h>
+#include <core/gpu/commandBuffer.h>
+
+#include <graphics/render/renderer.h>
 
 #include "IconsMaterialDesignIcons.h"
 
 #include <core/window.h>
+
+#include <algorithm>
 
 using namespace core::gpu;
 using namespace imgui;
@@ -31,8 +36,6 @@ Context::Context(const core::Window& _window, const core::gpu::Device& _device)
 
 	io.Fonts->AddFontDefault();
 	static const ImWchar icons_ranges[] = { ICON_MIN_MDI, ICON_MAX_MDI, 0 };
-
-	
 
 	ImFontConfig icons_config_small;
 	icons_config_small.MergeMode = true;
@@ -97,12 +100,12 @@ Context::Context(const core::Window& _window, const core::gpu::Device& _device)
 	ImGui_ImplVulkan_Init(&init_info);
 
 	currentViewportState = &m_viewportInfo;
-	InitViewport({});
+
+	InitViewport({ 1080, 720 });
 }
 
 Context::~Context()
 {
-
 	if (m_viewportInfo.dsSet != VK_NULL_HANDLE)
 	{
 		ImGui_ImplVulkan_RemoveTexture(m_viewportInfo.dsSet);
@@ -116,7 +119,6 @@ Context::~Context()
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
-
 	if (imguiDescriptorPool != VK_NULL_HANDLE)
 	{
 		vkDestroyDescriptorPool(*m_device.GetImpl().device, imguiDescriptorPool, nullptr);
@@ -126,24 +128,24 @@ Context::~Context()
 
 void Context::BeginFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _outputImage)
 {
-	if (!currentViewportState->colorImage || !currentViewportState->isUsable)
-		return;
-
-	if (currentViewportState->desiredSize.first <= 1 || currentViewportState->desiredSize.second <= 1)
-		return;
-
-	if (currentViewportState->desiredSize.first == 0 || currentViewportState->desiredSize.second == 0)
-		return;
-
-	if (!currentViewportState->colorImage)
-	{
-		InitViewport(currentViewportState->desiredSize);
-	}
+	// L'image du swapchain n'est jamais transitionnee automatiquement par
+	// AcquireNextImage(): elle sort soit en UNDEFINED (premiere frame), soit
+	// dans le layout laisse par le Present precedent (PRESENT_SRC_KHR).
+	// BeginRendering exige COLOR_ATTACHMENT_OPTIMAL pour un color attachment,
+	// donc on transitionne explicitement avant. clear = true sur l'attachment
+	// donc le contenu precedent (jete par oldLayout = Undefined) n'a pas
+	// besoin d'etre preserve.
+	_cmdBuf->TransitionImageLayout(
+		*_outputImage,
+		core::gpu::utils::EImageLayout::Undefined,
+		core::gpu::utils::EImageLayout::ColorAttachment,
+		false
+	);
 
 	CommandBuffer::RenderingAttachmentInfo colorAttachment
 	{
 		.image = _outputImage,
-		.clear = false
+		.clear = true
 	};
 
 	_cmdBuf->BeginRendering(m_device, { colorAttachment }, {});
@@ -165,14 +167,89 @@ void Context::EndFrame(core::gpu::CommandBuffer* _cmdBuf, core::gpu::Image* _out
 	_cmdBuf->EndRendering();
 }
 
+void Context::RenderSceneToViewport(core::gpu::CommandBuffer* _cmdBuf, graphics::render::Renderer* _renderer)
+{
+	ResizeViewportIfNeeded();
+
+	if (!currentViewportState->colorImage || !currentViewportState->isUsable)
+	{
+		return;
+	}
+
+	_renderer->Render(_cmdBuf, *currentViewportState->colorImage);
+
+	_cmdBuf->TransitionImageLayout(
+		*currentViewportState->colorImage,
+		core::gpu::utils::EImageLayout::ColorAttachment,
+		core::gpu::utils::EImageLayout::ShaderReadOnly,
+		false
+	);
+
+	currentViewportState->hasBeenRendered = true;
+}
+
+void Context::DrawViewportComponent(uint32_t _width, uint32_t _height)
+{
+	currentViewportState->desiredSize = { _width, _height };
+
+	if (!currentViewportState->isUsable || currentViewportState->dsSet == VK_NULL_HANDLE)
+	{
+		currentViewportState->hovered = false;
+		currentViewportState->focused = false;
+		return;
+	}
+
+	ImGui::Image(
+		(ImTextureID)currentViewportState->dsSet,
+		ImVec2(
+			static_cast<float>(currentViewportState->size.first),
+			static_cast<float>(currentViewportState->size.second)
+		)
+	);
+
+	currentViewportState->hovered = ImGui::IsItemHovered();
+	currentViewportState->focused = ImGui::IsWindowFocused();
+}
+
+core::gpu::Image* Context::GetViewportImage()
+{
+	return currentViewportState->colorImage.get();
+}
+
+void Context::ResizeViewportIfNeeded()
+{
+	auto& desired = currentViewportState->desiredSize;
+
+	if (desired.first <= 1 || desired.second <= 1) return;
+	if (currentViewportState->colorImage && currentViewportState->size == desired) return;
+
+	m_device.GetImpl().device.waitIdle();
+
+	if (currentViewportState->dsSet != VK_NULL_HANDLE)
+	{
+		ImGui_ImplVulkan_RemoveTexture(currentViewportState->dsSet);
+		currentViewportState->dsSet = VK_NULL_HANDLE;
+	}
+
+	currentViewportState->sampler = nullptr;
+	currentViewportState->colorImage.reset();
+	currentViewportState->isUsable = false;
+	currentViewportState->hasBeenRendered = false;
+
+	InitViewport(desired);
+}
+
 void Context::InitViewport(std::pair<uint32_t, uint32_t> _viewportSize)
 {
-	currentViewportState->desiredSize = std::pair<uint32_t, uint32_t>({ 1080, 720 });
+	currentViewportState->size = {
+		std::max(1u, _viewportSize.first),
+		std::max(1u, _viewportSize.second)
+	};
 
 	core::gpu::ImageCreateInfo imageInfo
 	{
-		.width = currentViewportState->desiredSize.first,
-		.height = currentViewportState->desiredSize.second,
+		.width = currentViewportState->size.first,
+		.height = currentViewportState->size.second,
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.format = core::gpu::utils::FromVulkan(m_device.GetImpl().swapchainImageFormat),
@@ -203,14 +280,11 @@ void Context::InitViewport(std::pair<uint32_t, uint32_t> _viewportSize)
 
 	currentViewportState->sampler = vk::raii::Sampler(m_device.GetImpl().device, samplerInfo);
 
-	if (currentViewportState->dsSet == VK_NULL_HANDLE)
-	{
-		currentViewportState->dsSet = ImGui_ImplVulkan_AddTexture(
-			*currentViewportState->sampler,
-			*currentViewportState->colorImage->GetImpl().view,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
-	}
+	currentViewportState->dsSet = ImGui_ImplVulkan_AddTexture(
+		*currentViewportState->sampler,
+		*currentViewportState->colorImage->GetImpl().view,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	);
 
 	currentViewportState->isUsable = true;
 }
