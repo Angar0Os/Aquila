@@ -157,3 +157,8 @@ When reporting an issue, please provide as much relevant information as possible
 
 Feedback and suggestions are also welcome.
 
+---
+
+## License
+
+This project is under MIT License.
