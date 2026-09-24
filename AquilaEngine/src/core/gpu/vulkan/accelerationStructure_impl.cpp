@@ -369,7 +369,7 @@ void AccelerationStructure::Build(const Device& _device) const
 		}
 
 		vk::AccelerationStructureBuildRangeInfoKHR rangeInfo{};
-		rangeInfo.primitiveCount = static_cast<uint32_t>(m_impl->instances.size()); // 0 si vide, OK
+		rangeInfo.primitiveCount = static_cast<uint32_t>(m_impl->instances.size()); 
 		rangeInfo.primitiveOffset = 0;
 		rangeInfo.firstVertex = 0;
 		rangeInfo.transformOffset = 0;

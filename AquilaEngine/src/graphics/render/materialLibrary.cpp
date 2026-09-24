@@ -127,7 +127,6 @@ void MaterialLibrary::UploadGPUData()
 	if (!dirty)
 		return;
 	
-	//if (materials.size() > MAX_MATERIALS_CAPACITY) { throw std::runtime_error("MaterialLibrary: material count exceeds MAX_MATERIALS_CAPACITY"); }
 	AQUILA_CHECK(materials.size() <= MAX_MATERIALS_CAPACITY, "MaterialLibrary: material count exceeds MAX_MATERIALS_CAPACITY");
 
 	const size_t byteSize = sizeof(MaterialGPUData) * materials.size();

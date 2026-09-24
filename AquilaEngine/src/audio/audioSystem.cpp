@@ -14,7 +14,7 @@ void ThrowIfFailed(ma_result result, const char* what)
     if (result != MA_SUCCESS)
     {
         throw std::runtime_error(
-            std::string("AudioSystem: ") + what + " a echoue (" +
+            std::string("AudioSystem: ") + what + " failed (" +
             ma_result_description(result) + ")"
         );
     }
@@ -63,7 +63,7 @@ void AudioSystem::Play(const MusicInfo& info)
             nullptr,
             &m_impl->sound
         ),
-        "ma_sound_init_from_file (fichier introuvable ou format non supporte)"
+        "ma_sound_init_from_file (file can't be found)"
     );
     m_impl->soundLoaded = true;
 

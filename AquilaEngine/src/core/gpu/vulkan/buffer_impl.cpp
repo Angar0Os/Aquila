@@ -28,12 +28,8 @@ Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 	vk::MemoryRequirements memRequirements = buffer.getMemoryRequirements();
 
 	vk::MemoryAllocateFlagsInfo allocFlagsInfo{};
-	//bool needsDeviceAddress = (_info.usage & utils::EBufferUsage::ShaderDeviceAddress) != utils::EBufferUsage::None;
 
-	//if (needsDeviceAddress)
-	{
-		allocFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
-	}
+	allocFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
 
 	vk::MemoryAllocateInfo allocInfo{};
 	allocInfo.allocationSize = memRequirements.size;
@@ -42,10 +38,7 @@ Buffer::Impl::Impl(const Device& _device, const BufferCreateInfo& _info)
 		utils::ToVulkan(_info.memoryProperties)
 	);
 
-	//if (needsDeviceAddress)
-	{
-		allocInfo.pNext = &allocFlagsInfo;
-	}
+	allocInfo.pNext = &allocFlagsInfo;
 
 	memory = vk::raii::DeviceMemory(_device.GetImpl().device, allocInfo);
 	usage = _info.usage;
