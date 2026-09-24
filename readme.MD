@@ -18,7 +18,7 @@ Aquila Engine uses a **RenderGraph** to organize rendering passes and their depe
 
 | GI                                                    | GI + Editor                                                 |
 | ----------------------------------------------------- | ----------------------------------------------------------- |
-| <img src="github_images/gi_showdown.png" width="300"> | <img src="github_images/gi_editor_showdow.png" width="300"> |
+| <img src="github_images/gi_showdown.png" width="500"> | <img src="github_images/gi_editor_showdown.png" width="500"> |
 
 
 ### Render Passes
