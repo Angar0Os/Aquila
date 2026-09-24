@@ -1,0 +1,10 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="AquilaEditor/AquilaEditor.vcxproj" Id="01ed6ede-8ad1-4d8d-9917-0d56869aaec9">
+    <BuildDependency Project="AquilaEngine/AquilaEngine.vcxproj" />
+  </Project>
+  <Project Path="AquilaEngine/AquilaEngine.vcxproj" Id="f96f4be7-e424-40b4-b2fa-58d6512181c8" />
+</Solution>

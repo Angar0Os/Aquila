@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>18.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{f96f4be7-e424-40b4-b2fa-58d6512181c8}</ProjectGuid>
+    <RootNamespace>AquilaEngine</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v145</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="..\MSBuildCustomizations\SlangCompile.props" />
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)lib\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(PlatformTarget)_$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_$(PlatformTarget)_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)lib\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(PlatformTarget)_$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_$(PlatformTarget)_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)lib\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(PlatformTarget)_$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_$(PlatformTarget)_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)lib\</OutDir>
+    <IntDir>$(SolutionDir)build\$(ProjectName)\$(PlatformTarget)_$(Configuration)\</IntDir>
+    <TargetName>$(ProjectName)_$(PlatformTarget)_$(Configuration)</TargetName>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+    <Lib>
+      <AdditionalDependencies>vulkan-1.lib</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+    <Lib>
+      <AdditionalDependencies>vulkan-1.lib</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp23</LanguageStandard>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+    <Lib>
+      <AdditionalDependencies>vulkan-1.lib</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard_C>stdclatest</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)external\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+    <Manifest>
+      <EnableSegmentHeap>true</EnableSegmentHeap>
+    </Manifest>
+    <Lib>
+      <AdditionalDependencies>vulkan-1.lib</AdditionalDependencies>
+    </Lib>
+    <Lib>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib;$(VULKAN_SDK)\Lib</AdditionalLibraryDirectories>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\audio\audioSystem.cpp" />
+    <ClCompile Include="src\core\debug\cpuProfiler.cpp" />
+    <ClCompile Include="src\core\debug\debugNames.cpp" />
+    <ClCompile Include="src\core\gpu\utils\converters.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\accelerationStructure_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\buffer_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\commandBuffer_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\commandPool_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\descriptorPool_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\descriptorSetLayout.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\descriptorSet_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\device_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\image_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\pipeline_impl.cpp" />
+    <ClCompile Include="src\core\gpu\vulkan\texture_impl.cpp" />
+    <ClCompile Include="src\core\input\system\inputAction.cpp" />
+    <ClCompile Include="src\core\input\system\inputMapper.cpp" />
+    <ClCompile Include="src\core\input\system\inputSystem_Win32_impl.cpp" />
+    <ClCompile Include="src\core\input\utils\input_converters.cpp" />
+    <ClCompile Include="src\core\window.cpp" />
+    <ClCompile Include="src\graphics\render\graph\renderGraph.cpp" />
+    <ClCompile Include="src\graphics\render\graph\resourceAllocator.cpp" />
+    <ClCompile Include="src\graphics\render\materialLibrary.cpp" />
+    <ClCompile Include="src\graphics\render\mesh.cpp" />
+    <ClCompile Include="src\graphics\render\renderer.cpp" />
+    <ClCompile Include="src\graphics\render\textureLibrary.cpp" />
+    <ClCompile Include="src\loaders\meshLoader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\audio\audioSystem.h" />
+    <ClInclude Include="include\core\debug\cpuProfiler.h" />
+    <ClInclude Include="include\core\debug\debug.h" />
+    <ClInclude Include="include\core\debug\debugNames.h" />
+    <ClInclude Include="include\core\gpu\accelerationStructure.h" />
+    <ClInclude Include="include\core\gpu\buffer.h" />
+    <ClInclude Include="include\core\gpu\commandBuffer.h" />
+    <ClInclude Include="include\core\gpu\commandPool.h" />
+    <ClInclude Include="include\core\gpu\descriptorPool.h" />
+    <ClInclude Include="include\core\gpu\descriptorSet.h" />
+    <ClInclude Include="include\core\gpu\descriptorSetLayout.h" />
+    <ClInclude Include="include\core\gpu\device.h" />
+    <ClInclude Include="include\core\gpu\image.h" />
+    <ClInclude Include="include\core\gpu\pipeline.h" />
+    <ClInclude Include="include\core\gpu\texture.h" />
+    <ClInclude Include="include\core\gpu\utils\converters.h" />
+    <ClInclude Include="include\core\gpu\utils\enums.h" />
+    <ClInclude Include="include\core\input\system\inputAction.h" />
+    <ClInclude Include="include\core\input\system\inputMapper.h" />
+    <ClInclude Include="include\core\input\system\inputSystem.h" />
+    <ClInclude Include="include\core\input\utils\keys.h" />
+    <ClInclude Include="include\core\window.h" />
+    <ClInclude Include="include\graphics\render\graph\lambdaPass.h" />
+    <ClInclude Include="include\graphics\render\graph\pass.h" />
+    <ClInclude Include="include\graphics\render\graph\renderGraph.h" />
+    <ClInclude Include="include\graphics\render\graph\resourceAllocator.h" />
+    <ClInclude Include="include\graphics\render\light.h" />
+    <ClInclude Include="include\graphics\render\material.h" />
+    <ClInclude Include="include\graphics\render\materialGPUData.h" />
+    <ClInclude Include="include\graphics\render\materialLibrary.h" />
+    <ClInclude Include="include\graphics\render\mesh.h" />
+    <ClInclude Include="include\graphics\render\renderer.h" />
+    <ClInclude Include="include\graphics\render\textureLibrary.h" />
+    <ClInclude Include="include\loaders\meshLoader.h" />
+    <ClInclude Include="include\loaders\shaderLoader.h" />
+    <ClInclude Include="src\audio\audioSystem_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\accelerationStructure_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\buffer_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\commandBuffer_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\commandPool_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\descriptorPool_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\descriptorSetLayout_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\descriptorSet_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\device_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\image_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\pipeline_impl.h" />
+    <ClInclude Include="src\core\gpu\vulkan\texture_impl.h" />
+    <ClInclude Include="src\core\input\system\inputSystem_Win32_impl.h" />
+    <ClInclude Include="src\core\input\utils\input_converters.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <SlangCompileTask Include="..\bin\assets\shaders\atrous.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\fxaa.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\gbuffer.slang">
+      <FileType>Document</FileType>
+      <Entrypoints Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">vertMain;fragMain</Entrypoints>
+      <Entrypoints Condition="'$(Configuration)|$(Platform)'=='Release|x64'">vertMain;fragMain</Entrypoints>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\gi.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\resolve.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+    <SlangCompileTask Include="..\bin\assets\shaders\shadow.slang">
+      <FileType>Document</FileType>
+    </SlangCompileTask>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\MSBuildCustomizations\SlangCompile.targets" />
+  </ImportGroup>
+</Project>

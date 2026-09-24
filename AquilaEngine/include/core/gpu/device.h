@@ -1,0 +1,40 @@
+#ifndef AQUILA_ENGINE_CORE_GPU_DEVICE_H
+#define AQUILA_ENGINE_CORE_GPU_DEVICE_H
+#pragma once
+
+#include <memory>
+
+namespace core { class Window; }
+
+namespace core::gpu
+{
+	class CommandBuffer;
+	class Image;
+
+	class Device
+	{
+	private:
+		struct Impl;
+		std::unique_ptr<Impl> m_impl;
+	public:
+		explicit Device(const Window& _wnd);
+		~Device() noexcept;
+
+		Image* AcquireNextImage();	
+
+		CommandBuffer* AcquireCommandBuffer() const;
+		void ReleaseCommandBuffer(CommandBuffer*& commandBuffer) const;
+		std::pair<uint32_t, uint32_t> GetSwapchainExtent() const;
+		void Present();
+
+		void RequestResize();
+		void WaitIdle() const;
+
+		static constexpr uint32_t FRAMES_IN_FLIGHT = 2;
+		uint32_t currentFrame = 0;
+
+		Impl& GetImpl() const;
+	};
+}
+
+#endif //AQUILA_ENGINE_CORE_GPU_DEVICE_H
