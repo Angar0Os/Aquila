@@ -16,9 +16,10 @@ Aquila Engine uses a **RenderGraph** to organize rendering passes and their depe
 
 ### Render Showcase
 
-| GI                                            | GI + Editor                                                |
-| --------------------------------------------- | ---------------------------------------------------------- |
-| ![GI Showdown](github_images/gi_showdown.png) | ![GI Editor Showdown](github_images/gi_editor_showdow.png) |
+| GI                                                    | GI + Editor                                                 |
+| ----------------------------------------------------- | ----------------------------------------------------------- |
+| <img src="github_images/gi_showdown.png" width="500"> | <img src="github_images/gi_editor_showdow.png" width="500"> |
+
 
 ### Render Passes
 
@@ -72,8 +73,7 @@ Before building Aquila Engine, make sure you have:
 ### Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd AquilaEngine
+git clone <https://github.com/Angar0Os/Aquila>
 ```
 
 ### Configure the `bin` Folder
